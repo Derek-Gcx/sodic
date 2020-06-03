@@ -103,7 +103,7 @@ venv.bak/
 
 
 # my gitignore
-asset/
-test/
-train/
-out/
+asset/*
+test/*
+train/*
+out/*
