@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy
+import time
 
 PATH = "./asset/train_TTI.csv"
 
@@ -107,5 +108,21 @@ def show_fix_x_TTI_distibution():
 
 
 if __name__ == "__main__":
-    show_fix_x_TTI_distibution()
+
+    with open("./train/toPredict_train_gps.csv", "r") as fp:
+        count = 0
+        while True:
+            line = fp.readline()
+            for char in ["[", "]", "\""]:
+                line = line.replace(char, "")
+            print(line.split(",")[0], line.split(",")[1], end="")
+            line = line.split(",")[2:]
+            line = [i.split(" ")[-1] for i in line]
+            line = [eval(i) for i in line]
+            line = [tuple(time.gmtime(i))[:6] for i in line]
+            print("from ", line[0], " to ", line[-1])
+            count += 1
+            if count == 500:
+                assert False
+
 
