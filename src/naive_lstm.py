@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -11,8 +12,8 @@ from torch.utils.data import DataLoader
 class Dataset(Data.Dataset):
     def __init__(self, path):
         rawData = pd.DataFrame(pd.read_csv(path, header=None))
-        rawX = rawData.iloc[:, 0:12].values
-        rawY = rawData.iloc[:, 12:15].values
+        rawX = rawData.iloc[:, 0:6].values
+        rawY = rawData.iloc[:, 6:7].values
         self.size = len(rawX)
         self.X = torch.tensor(rawX)
         self.Y = torch.tensor(rawY)
@@ -59,6 +60,8 @@ class naive_LSTM(nn.Module):
         return z
 
 
+input_size = 1
+output_size = 1
 batch_size = 1024
 dataset = Dataset("./train/processed/kr.csv")
 print(len(dataset))
@@ -67,7 +70,7 @@ valid_size = len(dataset) - train_size
 train, valid = torch.utils.data.random_split(dataset, [train_size, valid_size])
 train_data = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
 valid_data = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True)
-net = naive_LSTM(2, 3, True)
+net = naive_LSTM(input_size, output_size, True)
 para = net.parameters()
 optimizer = optim.Adam(para, lr=1e-03, betas=(0.9, 0.999))
 vis = visdom.Visdom(env='naive_LSTM')
@@ -78,8 +81,8 @@ def train(epoches):
     for epoch in range(epoches):
         net.train()
         for batch_idx, (X, Y) in enumerate(train_data):
-            X = X.reshape(X.shape[0], 6, 2).double()
-            Y = Y.reshape(Y.shape[0], -1, 3).double()
+            X = X.reshape(X.shape[0], 6, input_size).double()
+            Y = Y.reshape(Y.shape[0], -1, output_size).double()
             predi = net(X)
             loss_fn = torch.nn.L1Loss(reduce='mean')
             assert(predi.shape == Y.shape)
@@ -98,8 +101,8 @@ def valid():
     result = []
     with torch.no_grad():
         for batch_idx, (X, Y) in enumerate(valid_data):
-            X = X.reshape(X.shape[0], 6, 2).double()
-            Y = Y.reshape(Y.shape[0], -1, 3).double()
+            X = X.reshape(X.shape[0], 6, input_size).double()
+            Y = Y.reshape(Y.shape[0], -1, output_size).double()
             predi = net(X) 
             loss_fn = torch.nn.L1Loss(reduce='mean')
             loss = loss_fn(predi, Y)
@@ -113,7 +116,7 @@ def test():
     test_data = DataLoader(dataset=test, batch_size=batch_size)
     with torch.no_grad():
         for batch_idx, (X, Y) in enumerate(test_data):
-            X = X.reshape(X.shape[0], 6, 2).double()
+            X = X.reshape(X.shape[0], 6, output_size).double()
             predi = net(X).numpy().tolist()
             for item in predi:
                 for TTI in item[0]:
@@ -126,8 +129,29 @@ def test():
             obj_writer.writerow(row)
 
 
+def boost_test():
+    result = []
+    for line in open("./train/processed/ToPredict.csv"):
+        line = line.split(",")[:6]
+        for index in range(len(line)):
+            line[index] = float(line[index])
+        for i in range(3):
+            ipt_tensor = torch.from_numpy(np.array(line)).reshape(1, 6, output_size).double()
+            predi = net(ipt_tensor).item()
+            result.append(predi)
+            line.pop(0)
+            line.append(predi)
+    with open("./train/submit.csv", "a+", newline='') as objfile:
+        obj_writer = csv.writer(objfile)
+        obj_writer.writerow(["id_sample", "TTI"])
+        for i in range(len(result)):
+            row = [i, result[i]]
+            obj_writer.writerow(row)
+
+
 if __name__ == "__main__":
     # train(100)
     net.load_state_dict(torch.load("./out/1024naive_LSTM_100.pth"))
-    valid()
-    test()
+    # valid()
+    # test()
+    boost_test()
