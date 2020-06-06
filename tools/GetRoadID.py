@@ -20,7 +20,7 @@ roadDict = {
     276264: [[114.026181,22.605936], [114.027962,22.604985], [114.032983,22.596764], [114.029679,22.592108], [114.027082,22.591732], 0], # 玉龙路南北
     276265: [[114.026181,22.605936], [114.027962,22.604985], [114.032983,22.596764], [114.029679,22.592108], [114.027082,22.591732], 180], # 玉龙路北南
     276268: [[114.022083,22.616682], [114.023247,22.617375], [114.035156,22.605233], [114.034142,22.604519], 315], # 新区大道南北
-    276269: [[114.03404,22.604262], [114.034877,22.605074], [114.040306,22.599627], [114.039576,22.598874], 135], # 新区大道北南
+    276269: [[114.022083,22.616682], [114.023247,22.617375], [114.040306,22.599627], [114.039576,22.598874], 135], # 新区大道北南
     276737: [[114.023247,22.609274], [114.024663,22.609769], [114.028139,22.606322], [114.027131,22.605708], 315], # 致远中路北南
     276738: [[114.023247,22.609274], [114.024663,22.609769], [114.028139,22.606322], [114.027131,22.605708], 135], # 致远中路南北
 }
@@ -47,13 +47,14 @@ def getRoadID(lng, lat, direction):
         if ok == False:
             continue
         else:
-            if abs(direction-cors[-1]) <= 90 or abs(360-cors[-1]-direction) <= 90:
-                ret.append(roadID)
-        
-    if ret == []:
-        return 0
-    else:
-        return ret
+            if 0<direction<cors[-1]-270 or cors[-1]-90 < direction < cors[-1]+90 or cors[-1]+270 < direction < 360:
+                # ret.append(roadID)
+                return roadID
+    return 0
+    # if ret == []:
+    #     return 0
+    # else:
+    #     return ret
 
 
 # def rewrite_dataset():
@@ -96,7 +97,7 @@ def show_trace():
     useful_x = list()
     useful_y = list()
     useless_counter = 0
-    for line in open("./train/toPredict_train_gps.csv"):
+    for line in open("./test/toPredict_train_gps.csv"):
         line_counter += 1
 
         illegal_char = ["[", "\"", "]"]
@@ -107,12 +108,17 @@ def show_trace():
         for record in gps_records:
             lng, lat, speed, direction, seconds = [eval(i) for i in record.strip().split(" ")]
             road_id = getRoadID(lng, lat, direction)
+            # print(road_id)
             if road_id == 0:
                 useless_x.append(lng)
                 useless_y.append(lat)
             else:
-                useful_x.append(lng)
-                useful_y.append(lat)
+                if road_id == 276269 or road_id == 276268:
+                    useful_x.append(lng)
+                    useful_y.append(lat)
+                else:
+                    useless_x.append(lng)
+                    useless_y.append(lat)
 
             if len(useless_x) == 4000:
                 useless_counter += 4000
@@ -120,7 +126,7 @@ def show_trace():
                 plt.scatter(useless_x, useless_y, s=3, c="r")
                 useless_x = list()
                 useless_y = list()
-            if len(useful_x) == 50000:
+            if len(useful_x) == 1000:
                 plt.scatter(useless_x, useless_y, s=3, c="r")
                 useless_x = list()
                 useless_y = list()
