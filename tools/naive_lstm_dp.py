@@ -1,22 +1,12 @@
 import csv
 import copy
 import os
+import sys
 
+sys.path.append(os.getcwd())
+import tools.group as gp
 
-roadDict = {
-    276183: 0,
-    276184: 1,
-    275911: 2, 
-    275912: 3,
-    276240: 4,
-    276241: 5,
-    276264: 6,
-    276265: 7,
-    276268: 8,
-    276269: 9,
-    276737: 10,
-    276738: 11
-}
+gp_num = 4
 
 
 def train_dp_withspeed():
@@ -95,7 +85,7 @@ def train_dp():
 
 def train_dp_withgroup():
     all_trajs = []
-    for index in range(12):
+    for index in range(gp_num):
         group = [0]
         all_trajs.append(group)
     TTI = []
@@ -110,7 +100,7 @@ def train_dp_withgroup():
         else:
             if (road_id != line[0]) or (date != line[3].split(" ")[0]):
                 road_id = line[0]
-                group = roadDict.get(int(road_id), -1)
+                group = gp.igmap(int(road_id))
                 date = line[3].split(" ")[0]
                 TTI = []
                 TTI.append(line[1])
@@ -118,14 +108,14 @@ def train_dp_withgroup():
                 if (len(TTI) == 6):
                     TTI.append(line[1])
                     all_trajs[group].append(copy.deepcopy(TTI))
-                    if(all_trajs[group][0]==0):
+                    if (all_trajs[group][0] == 0):
                         all_trajs[group].pop(0)
                     TTI.pop(0)
                 else:
                     TTI.append(line[1])
-        for index in range(12):
+        for index in range(gp_num):
             if (len(all_trajs[index]) == batch_size) or (group != index and len(all_trajs[index]) > 1):
-                with open("./train/processed/kr"+str(index)+".csv", "a+", newline='') as objfile:
+                with open("./train/processed/kr" + str(index) + ".csv","a+",newline='') as objfile:
                     obj_writer = csv.writer(objfile)
                     for item in all_trajs[index]:
                         obj_writer.writerow(item)
@@ -134,39 +124,36 @@ def train_dp_withgroup():
 
 def test_dp_withgroup():
     all_trajs = []
-    for index in range(12):
-        group = [0]
-        all_trajs.append(group)
-    traj = []
-    count = -1
-    group = 0
+    for i in range(12):
+        all_trajs.append([0])
+    TTI = []
     road_id = 0
+    index = -1
+    count = 0
     for line in open("./train/toPredict_train_TTI.csv"):
         line = line.split(",")
-        count += 1
-        if (line[0] == "id_road"):
+        if line[0] == 'id_road':
             continue
         else:
+            count += 1
             if (road_id != line[0]):
                 road_id = line[0]
-                group = roadDict.get(int(road_id), -1)
-                traj = []
-                traj.append(line[1])
-            if (len(traj) == 6):
-                assert (count % 6 == 0)
-                traj.append(0)
-                all_trajs[group].append(copy.deepcopy(traj))
-                if(all_trajs[group][0]==0):
-                    all_trajs[group].pop(0)
-                traj = []
-                traj.append(line[1])
+                index = gp.iimap(int(road_id))
+                TTI = []
+                TTI.append(line[1])
             else:
-                traj.append(line[1])
-    if (len(traj) == 6):
-        traj.append(0)
-        all_trajs[group].append(traj)
+                if (len(TTI) == 5):
+                    TTI.append(line[1])
+                    TTI.append(0)
+                    all_trajs[index].append(copy.deepcopy(TTI))
+                    assert (count % 6 == 0)
+                    TTI = []
+                    if (all_trajs[index][0] == 0):
+                        all_trajs[index].pop(0)
+                else:
+                    TTI.append(line[1])
     for group in range(12):
-        with open("./train/processed/ToPredict"+str(group)+".csv", "a+", newline='') as objfile:
+        with open("./train/processed/ToPredict" + str(group) + ".csv", "a+", newline='') as objfile:
             obj_writer = csv.writer(objfile)
             for item in all_trajs[group]:
                 obj_writer.writerow(item)
@@ -179,14 +166,16 @@ def test_dp():
     TTI = []
     road_id = 0
     index = -1
+    count = 0
     for line in open("./train/toPredict_train_TTI.csv"):
         line = line.split(",")
         if line[0] == 'id_road':
             continue
         else:
+            count += 1
             if (road_id != line[0]):
                 road_id = line[0]
-                index = roadDict.get(int(road_id), -1)
+                index = gp.iimap(int(road_id))
                 TTI = []
                 TTI.append(line[1])
             else:
@@ -194,20 +183,20 @@ def test_dp():
                     TTI.append(line[1])
                     TTI.append(0)
                     all_trajs[index].append(copy.deepcopy(TTI))
-                    TTI.pop(-1)
-                    if(all_trajs[index][0] == 0):
+                    assert (count % 6 == 0)
+                    TTI = []
+                    if (all_trajs[index][0] == 0):
                         all_trajs[index].pop(0)
-                    TTI.pop(0)
                 else:
                     TTI.append(line[1])
     with open("./train/processed/ToPredict.csv", "a+", newline='') as objfile:
         obj_writer = csv.writer(objfile)
-        while(len(all_trajs[0])>=120):
+        while (len(all_trajs[0]) >= 7):
             for i in range(12):
-                for item in all_trajs[i][:120]:
+                for item in all_trajs[i][:7]:
                     obj_writer.writerow(item)
-                if(len(all_trajs[i]) >= 120):
-                    all_trajs[i] = all_trajs[i][120:]
+                if (len(all_trajs[i]) >= 7):
+                    all_trajs[i] = all_trajs[i][7:]
                 else:
                     all_trajs[i] = []
 
@@ -250,5 +239,5 @@ def clear():
 
 if __name__ == '__main__':
     # clear()
-    # train_dp_withgroup()
+    train_dp_withgroup()
     test_dp()

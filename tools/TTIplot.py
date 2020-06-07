@@ -17,12 +17,12 @@ if __name__ == '__main__':
                 if traj != []:
                     all_traj.append(traj)
                 traj = []
-            traj.append(float(line[1]))
+            traj.append(float(line[2]))
     all_traj.append(traj)
     for i in range(len(all_traj)):
-        plt.plot(all_traj[i], label=str(all_id[i]))
-        # sns.distplot(all_traj[i], label=str(all_id[i]))
-    plt.legend()
-    plt.show()
+        # plt.plot(all_traj[i], label=str(all_id[i]))
+        sns.distplot(all_traj[i], label=str(all_id[i]))
+        plt.legend()
+        plt.show()
         # plt.savefig('./pic/'+str(all_id[i])+'TTI.png')
         # plt.clf()
