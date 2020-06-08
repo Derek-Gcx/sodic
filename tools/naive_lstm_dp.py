@@ -86,13 +86,13 @@ def train_dp():
 
 def train_dp_withgroup():
     all_trajs = []
-    T = []
-    count = []
+    # T = []
+    # count = []
     for index in range(gp_num):
         group = [0]
         all_trajs.append(group)
-        T.append(0)
-        count.append(0)
+        # T.append(0)
+        # count.append(0)
     TTI = []
     road_id = 0
     date = ""
@@ -107,8 +107,8 @@ def train_dp_withgroup():
                 road_id = line[0]
                 group = gp.igmap(int(road_id))
                 date = line[3].split(" ")[0]
-                T[group] += float(line[1])
-                count[group] += 1
+                # T[group] += float(line[1])
+                # count[group] += 1
                 TTI = []
                 TTI.append(line[1])
             else:
@@ -120,20 +120,18 @@ def train_dp_withgroup():
                     TTI.pop(0)
                 else:
                     TTI.append(line[1])
-    for index in range(gp_num):
-        T[index] /= count[index]
-        if (len(all_trajs[index]) == batch_size) or (
-                group != index and len(all_trajs[index]) > 1):
-            with open("./train/processed/kr" + str(index) + ".csv",
-                      "a+",
-                      newline='') as objfile:
-                obj_writer = csv.writer(objfile)
-                for item in all_trajs[index]:
-                    for i in range(len(item)):
-                        item[i] = float(item[i]) - T[index]
-                    obj_writer.writerow(item)
-            all_trajs[index] = [0]
-            print(T[index])
+        for index in range(gp_num):
+            # T[index] /= count[index]
+            if (len(all_trajs[index]) == batch_size) or (
+                    group != index and len(all_trajs[index]) > 1):
+                with open("./train/processed/kr" + str(index) + ".csv", "a+", newline='') as objfile:
+                    obj_writer = csv.writer(objfile)
+                    for item in all_trajs[index]:
+                        # for i in range(len(item)):
+                        #     item[i] = float(item[i]) - T[index]
+                        obj_writer.writerow(item)
+                all_trajs[index] = [0]
+                # print(T[index])
 
 
 def test_dp_withgroup():
