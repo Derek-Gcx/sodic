@@ -2,11 +2,12 @@ import csv
 import copy
 import os
 import sys
+import re
 
 sys.path.append(os.getcwd())
 import tools.group as gp
 
-gp_num = 4
+gp_num = 12
 
 
 def train_dp_withspeed():
@@ -85,9 +86,13 @@ def train_dp():
 
 def train_dp_withgroup():
     all_trajs = []
+    T = []
+    count = []
     for index in range(gp_num):
         group = [0]
         all_trajs.append(group)
+        T.append(0)
+        count.append(0)
     TTI = []
     road_id = 0
     date = ""
@@ -102,6 +107,8 @@ def train_dp_withgroup():
                 road_id = line[0]
                 group = gp.igmap(int(road_id))
                 date = line[3].split(" ")[0]
+                T[group] += float(line[1])
+                count[group] += 1
                 TTI = []
                 TTI.append(line[1])
             else:
@@ -113,13 +120,20 @@ def train_dp_withgroup():
                     TTI.pop(0)
                 else:
                     TTI.append(line[1])
-        for index in range(gp_num):
-            if (len(all_trajs[index]) == batch_size) or (group != index and len(all_trajs[index]) > 1):
-                with open("./train/processed/kr" + str(index) + ".csv","a+",newline='') as objfile:
-                    obj_writer = csv.writer(objfile)
-                    for item in all_trajs[index]:
-                        obj_writer.writerow(item)
-                all_trajs[index] = [0]
+    for index in range(gp_num):
+        T[index] /= count[index]
+        if (len(all_trajs[index]) == batch_size) or (
+                group != index and len(all_trajs[index]) > 1):
+            with open("./train/processed/kr" + str(index) + ".csv",
+                      "a+",
+                      newline='') as objfile:
+                obj_writer = csv.writer(objfile)
+                for item in all_trajs[index]:
+                    for i in range(len(item)):
+                        item[i] = float(item[i]) - T[index]
+                    obj_writer.writerow(item)
+            all_trajs[index] = [0]
+            print(T[index])
 
 
 def test_dp_withgroup():
@@ -153,7 +167,9 @@ def test_dp_withgroup():
                 else:
                     TTI.append(line[1])
     for group in range(12):
-        with open("./train/processed/ToPredict" + str(group) + ".csv", "a+", newline='') as objfile:
+        with open("./train/processed/ToPredict" + str(group) + ".csv",
+                  "a+",
+                  newline='') as objfile:
             obj_writer = csv.writer(objfile)
             for item in all_trajs[group]:
                 obj_writer.writerow(item)
@@ -229,15 +245,19 @@ def test_dp_withspeed():
 
 
 def clear():
+    pwd = os.getcwd() + r'\train\processed'
+    for filename in os.listdir(pwd):
+        if (re.search("kr", filename) != None):
+            os.remove(pwd + "\\" + filename)
     # if(os.path.exists("D:\projects\python\sodic\train\processed\kr.csv")):
-    os.remove(r"D:\projects\python\sodic\train\processed\kr.csv")
+    # os.remove(r"D:\projects\python\sodic\train\processed\kr.csv")
     # if(os.path.exists("D:\projects\python\sodic\train\processed\ToPredict.csv")):
-    os.remove(r"D:\projects\python\sodic\train\processed\ToPredict.csv")
+    # os.remove(r"D:\projects\python\sodic\train\processed\ToPredict.csv")
     # if(os.path.exists("D:\projects\python\sodic\train\submit.csv")):
     # os.remove(r"D:\projects\python\sodic\train\submit.csv")
 
 
 if __name__ == '__main__':
-    # clear()
+    clear()
     train_dp_withgroup()
     test_dp()
