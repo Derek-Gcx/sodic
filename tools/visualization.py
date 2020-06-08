@@ -21,6 +21,21 @@ color = {
     276738: [], 
 }
 
+
+xs = {
+    276183: [], 
+    276184: [], 
+    275911: [], 
+    275912: [], 
+    276240: [], 
+    276241: [], 
+    276264: [], 
+    276265: [], 
+    276268: [], 
+    276269: [], 
+    276737: [], 
+    276738: [], 
+}
 ys = {
     276183: [], 
     276184: [], 
@@ -50,15 +65,18 @@ def show_TTI_avgspeed():
         xs[road_id].append(avgspeed)
         ys[road_id].append(TTI)
 
-    color = ['pink', 'b', 'r', '#FF7F50', '#00008B', '#E9967A', '#B22222', '#DAA520', '#90EE90', '#6B8E23', '#DB7093', '#F5DEB3']
+    color = ['pink', 'b', 'r', 'yellow', 'gray', 'green', 'purple', 'orange', 'black', '#6B8E23', '#DB7093', '#F5DEB3']
 
     for road_id in xs.keys():
         col = color.pop()
         print(sum(ys[road_id])/len(ys[road_id]))
         print(max(ys[road_id]))
-        plt.scatter(xs[road_id], ys[road_id], s=3, c=col);
-    
+        plt.scatter(xs[road_id], ys[road_id], s=3, c=col, label=str(road_id));
+    plt.legend()
     plt.show()
+
+    # plt.scatter(xs[276265], ys[276265], s=3, c="r")
+    # plt.show()
 
 def show_fix_x_TTI_distibution():
 
@@ -156,7 +174,7 @@ def show_correlation():
     # 以一月一号为例,观察各时段下各路段TTI之间的差别
     color = ['pink', 'b', 'r', '#FF7F50', '#00008B', '#E9967A', '#B22222', '#DAA520', '#90EE90', '#6B8E23', '#DB7093', '#F5DEB3']
     y = {}
-    with open("../asset/train_TTI.csv", "r") as fp:
+    with open("./asset/train_TTI.csv", "r") as fp:
         current = 0
         line = fp.readline()
         line = fp.readline()
@@ -273,16 +291,96 @@ def foo():
         # print(count)
         pp = [ count[r].get(i, 0) for i in range(144)]
         # print(pp)
-        ppp = [sum(average_speed[r].get(i, [0])) / len(average_speed[r].get(i, [0])) for i in range(144)]
+        ppp = [sum(average_speed[r].get(i, [0])) / len(average_speed[r].get(i, [0]))*3.6 for i in range(144)]
         plt.plot(range(144),pp, c="b")
         plt.plot(range(144), ppp, c="purple")
         plt.show()
 
 
+def show_seasonality():
+    color = ['pink', 'b', 'r', '#FF7F50', '#00008B', '#E9967A', '#B22222', '#DAA520', '#90EE90', '#6B8E23', '#DB7093', '#F5DEB3']
+    TTIs = {}
+    avg_speeds = {}
+    with open("./asset/train_TTI.csv", "r") as fp:
+        line = fp.readline()
+        line = fp.readline()
+        print(line)
+        current = 0
+        while line:
+            line = line.split(",")
+            if current != eval(line[0]):
+                current = eval(line[0])
+                TTIs[current] = []
+                avg_speeds[current] = []
+            if line[3].endswith("10:40:00\n"):
+                TTIs[current].append(eval(line[1]))
+                avg_speeds[current].append(eval(line[2]))
+            line = fp.readline()
+
+    for r in TTIs.keys():
+        c = color.pop()
+        plt.scatter(range(len(TTIs[r])), TTIs[r], c=c, s=3)
+    plt.show()
+
+def show_276265_TTI():
+    y1 = {}
+    y2 = {}
+    y3 = {}
+    y4 = {}
+    y5 = {}
+    for y in [y1, y2, y3, y4, y5]:
+        for i in range(144):
+            y[i] = []
+
+    with open("./asset/train_TTI.csv", "r") as fp:
+        current = 0
+        line = fp.readline()
+        line = fp.readline()
+
+        while line:
+            line = line.split(",")
+            if eval(line[0]) == 275911:
+                TTI = eval(line[1])
+                clock = line[-1].split(" ")[-1].split(":")
+                # print(clock)
+                time_stamp = int(clock[0]) * 6 + int(clock[1]) // 10
+                y1[time_stamp].append(TTI)
+            elif eval(line[0]) == 276265:
+                TTI = eval(line[1])
+                clock = line[-1].split(" ")[-1].split(":")
+                time_stamp = int(clock[0]) * 6 + int(clock[1]) // 10
+                y2[time_stamp].append(TTI)
+            elif eval(line[0]) == 276264:
+                TTI = eval(line[1])
+                clock = line[-1].split(" ")[-1].split(":")
+                time_stamp = int(clock[0]) * 6 + int(clock[1]) // 10
+                y3[time_stamp].append(TTI)
+            elif eval(line[0]) == 276737:
+                TTI = eval(line[1])
+                clock = line[-1].split(" ")[-1].split(":")
+                time_stamp = int(clock[0]) * 6 + int(clock[1]) // 10
+                y4[time_stamp].append(TTI)
+            elif eval(line[0]) == 276738:
+                TTI = eval(line[1])
+                clock = line[-1].split(" ")[-1].split(":")
+                time_stamp = int(clock[0]) * 6 + int(clock[1]) // 10
+                y5[time_stamp].append(TTI)
+            line = fp.readline()
+
+        p = [sum(i)/len(i) for i in y1.values()]
+        pp = [sum(i)/len(i) for i in y2.values()]
+        ppp = [sum(i)/len(i) for i in y3.values()]
+        pppp = [sum(i)/len(i) for i in y4.values()]
+        ppppp = [sum(i)/len(i) for i in y5.values()]
+        plt.scatter(range(144), p, s=3, c="r", label = str(275911))
+        plt.scatter(range(144), pp, s=3, c="b", label=str(276225))
+        plt.scatter(range(144), ppp, s=3, c="g", label=str(276264))
+        plt.scatter(range(144), pppp, s=3, c="black", label=str(276737))
+        plt.scatter(range(144), ppppp, s=3, c="purple", label=str(276738))
+        plt.legend()
+        plt.show()
 
 
-
-            
 
 
 
@@ -290,6 +388,9 @@ def foo():
 
 if __name__ == "__main__":
 
-    foo()
+    # show_seasonality()
+    # foo()
+    # show_TTI_avgspeed()
+    show_276265_TTI()
 
 
