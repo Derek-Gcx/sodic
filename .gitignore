@@ -107,4 +107,5 @@ asset/*
 test/*
 train/*
 out/*
+pic/*
 .vscode/*
