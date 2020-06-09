@@ -15,6 +15,7 @@ def trace_peak():
         if float(line[1]) > peak:
             peak = float(line[1])
             date = line[3].split(" ")[0]
+            print(date)
         else:
             if(float(line[1]) < peak) and ((float(line[1])) > next_peak):
                 next_peak = float(line[1])
@@ -39,7 +40,6 @@ def trace_peak():
         trajs.append(traj)
     data = pd.DataFrame(trajs).transpose()
     data.rename(columns=ids, inplace=True)
-    print(data)
     sns.lineplot(data=data, dashes=False)
     plt.show()
 

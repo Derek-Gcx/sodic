@@ -70,24 +70,25 @@ class naive_LSTM(nn.Module):
         return z
 
 
-def run(i):
-    group = str(i)
+def run(group_index):
+    group = str(group_index)
     input_size = 1
     output_size = 1
     batch_size = 1024
     dataset = Dataset("./train/processed/kr"+group+".csv")
     train_size = int(0.8 * len(dataset))
     valid_size = len(dataset) - train_size
-    train, valid = torch.utils.data.random_split(dataset, [train_size, valid_size])
+    train_set, valid_set = torch.utils.data.random_split(dataset, [train_size, valid_size])
     whole_data = DataLoader(dataset=dataset, batch_size=batch_size)
-    train_data = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
-    valid_data = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True)
+    train_data = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
+    valid_data = DataLoader(dataset=valid_set, batch_size=batch_size, shuffle=True)
     net = naive_LSTM(input_size, output_size, True)
     para = net.parameters()
     # optimizer = optim.Adam(para, lr=1e-03, betas=(0.9, 0.999))
     optimizer = optim.RMSprop(para, lr=1e-03, momentum=0.9)
     vis = visdom.Visdom(env='naive_LSTM')
     vis.line([[0.]], [0],win='train',opts=dict(title='losses', legend=['loss']))
+    bg = 1
 
     def train(epoches):
         for epoch in range(epoches):
@@ -108,71 +109,89 @@ def run(i):
             if epoch == 99:
                 torch.save(net.state_dict(), './out/group_'+group+'_LSTM_100.pth')
 
-        def valid():
-            result = []
-            real_val = []
-            pre_val = []
-            with torch.no_grad():
-                for batch_idx, (X, Y) in enumerate(valid_data):
-                    X = X.reshape(X.shape[0], 6, input_size).double()
-                    Y = Y.reshape(Y.shape[0], -1, output_size).double()
-                    predi = net(X) 
-                    loss_fn = torch.nn.L1Loss(reduce='mean')
-                    loss = loss_fn(predi, Y)
-                    result.append(loss.item())
-                    Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
-                    predi = net(X).reshape(X.shape[0], 1).numpy().tolist()
-                    real_val += Y
-                    pre_val += predi
-            print("performance on validation set is {}".format(sum(result)/len(result)))
-            plt.plot(real_val, label="real")
-            plt.plot(pre_val, label="predi")
-            plt.legend()
-            plt.show()
+    def valid():
+        result = []
+        real_val = []
+        pre_val = []
+        with torch.no_grad():
+            for batch_idx, (X, Y) in enumerate(valid_data):
+                X = X.reshape(X.shape[0], 6, input_size).double()
+                Y = Y.reshape(Y.shape[0], -1, output_size).double()
+                predi = net(X) 
+                loss_fn = torch.nn.L1Loss(reduce='mean')
+                loss = loss_fn(predi, Y)
+                result.append(loss.item())
+                Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
+                predi = net(X).reshape(X.shape[0], 1).numpy().tolist()
+                real_val += Y
+                pre_val += predi
+        print("performance on validation set is {}".format(sum(result)/len(result)))
+        plt.plot(real_val, label="real")
+        plt.plot(pre_val, label="predi")
+        plt.legend()
+        plt.show()
 
-        def group_switch(road_id):
-            g = str(gp.igmap(road_id))
-            net.load_state_dict(torch.load('./out/group_'+g+'_LSTM_100.pth'))
+    def group_switch(road_id):
+        g = str(gp.igmap(road_id))
+        net.load_state_dict(torch.load('./out/group_'+g+'_LSTM_100.pth'))
 
-        def test():
-            result = []
-            test = Dataset("./train/processed/ToPredict.csv")
-            test_data = DataLoader(dataset=test, batch_size=batch_size)
-            with torch.no_grad():
-                for batch_idx, (X, Y) in enumerate(test_data):
-                    X = X.reshape(X.shape[0], 6, output_size).double()
-                    predi = net(X).numpy().tolist()
-                    for item in predi:
-                        for TTI in item[0]:
-                            result.append(TTI)
-            with open("./train/submit.csv", "a+", newline='') as objfile:
-                obj_writer = csv.writer(objfile)
-                obj_writer.writerow(["id_sample", "TTI"])
-                for i in range(len(result)):
-                    row = [i, result[i]]
-                    obj_writer.writerow(row)
+    def test():
+        result = []
+        test = Dataset("./train/processed/ToPredict.csv")
+        test_data = DataLoader(dataset=test, batch_size=batch_size)
+        with torch.no_grad():
+            for batch_idx, (X, Y) in enumerate(test_data):
+                X = X.reshape(X.shape[0], 6, output_size).double()
+                predi = net(X).numpy().tolist()
+                for item in predi:
+                    for TTI in item[0]:
+                        result.append(TTI)
+        with open("./train/submit.csv", "a+", newline='') as objfile:
+            obj_writer = csv.writer(objfile)
+            obj_writer.writerow(["id_sample", "TTI"])
+            for i in range(len(result)):
+                row = [i, result[i]]
+                obj_writer.writerow(row)
 
-        def boost_test():
-            road_ids = []
-            count = 0
-            for line in open('./train/toPredict_noLabel.csv'):
-                line = line.split(",")
-                if line[0] == "id_sample":
-                    continue
-                else:
-                    if count % 3 == 0:
-                        road_ids.append(line[1])
-                    count += 1
-            result = []
-            indi = 0
-            last_id = -1
-            for line in open("./train/processed/ToPredict.csv"):
-                line = line.split(",")[:6]
-                road_id = int(road_ids[indi])
-                if(last_id != road_id):
-                    last_id = road_id
-                group_switch(road_id)
+    def bag_switch(road_id, bag):
+        g = str(gp.igmap(road_id))
+        model = './out/group_'+g+'_bag'+str(bag)+'.pth'
+        net.load_state_dict(torch.load(model))
+
+    def boost_test():
+        road_ids = []
+        count = 0
+        for line in open('./train/toPredict_noLabel.csv'):
+            line = line.split(",")
+            if line[0] == "id_sample":
+                continue
+            else:
+                if count % 3 == 0:
+                    road_ids.append(line[1])
+                count += 1
+        result = []
+        indi = 0
+        last_id = -1
+        for line in open("./train/processed/ToPredict.csv"):
+            line = line.split(",")[:6]
+            road_id = int(road_ids[indi])
+            if(last_id != road_id):
+                last_id = road_id
+            if(bg == 1):
+                for index in range(len(line)):
+                    line[index] = float(line[index])
+                for i in range(3):
+                    predi = 0
+                    for bag in range(10):
+                        bag_switch(road_id, bag)
+                        ipt_tensor = torch.from_numpy(np.array(line)).reshape(1, 6, output_size).double()
+                        predi += net(ipt_tensor).item()
+                    result.append(predi/10)
+                    line.pop(0)
+                    line.append(predi)
                 indi += 1
+            else:
+                group_switch(road_id)
                 for index in range(len(line)):
                     line[index] = float(line[index])
                 for i in range(3):
@@ -181,16 +200,42 @@ def run(i):
                     result.append(predi)
                     line.pop(0)
                     line.append(predi)
-            with open("./train/submit.csv", "a+", newline='') as objfile:
-                obj_writer = csv.writer(objfile)
-                obj_writer.writerow(["id_sample", "TTI"])
-                for i in range(len(result)):
-                    row = [i, result[i]]
-                    obj_writer.writerow(row)
-        train(100)
-        # net.load_state_dict(torch.load('./out/group_'+group+'_LSTM_100.pth'))
-        # valid()
-        # test()
+                indi += 1
+        with open("./train/submit.csv", "a+", newline='') as objfile:
+            obj_writer = csv.writer(objfile)
+            obj_writer.writerow(["id_sample", "TTI"])
+            for i in range(len(result)):
+                row = [i, result[i]]
+                obj_writer.writerow(row)
+    
+    def bagging(bags, epoches):
+        for bag in range(bags):
+            sample_size = int(0.8 * train_size)
+            sample, _ = torch.utils.data.random_split(train_set, [sample_size, train_size-sample_size])
+            sample_data = DataLoader(dataset=sample, batch_size=batch_size, shuffle=True)
+            for epoch in range(epoches):
+                net.train()
+                for batch_idx, (X, Y) in enumerate(sample_data):
+                    X = X.reshape(X.shape[0], 6, input_size).double()
+                    Y = Y.reshape(Y.shape[0], -1, output_size).double()
+                    predi = net(X)
+                    loss_fn = torch.nn.L1Loss(reduce='mean')
+                    assert(predi.shape == Y.shape)
+                    loss = loss_fn(predi, Y)
+                    net.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    if batch_idx % 10 == 0:
+                        vis.line([loss.item()], [batch_idx + epoch * len(dataset)/batch_size], win='train', update='append')
+                        print("batch: {}, loss {}".format(batch_idx + epoch * len(dataset)/batch_size, loss.item()))
+            torch.save(net.state_dict(), './out/group_'+group+'_bag'+str(bag)+'.pth')
+
+    # train(100)
+    # bagging(10, 100)
+    # net.load_state_dict(torch.load('./out/group_'+group+'_LSTM_100.pth'))
+    # valid()
+    # test()
+    if(group == "11"):
         boost_test()
 
 
