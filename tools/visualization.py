@@ -360,9 +360,11 @@ def show_avg_TTI_around_year():
     for id in roads.keys():
         roads[id] = [sum(i)/len(i) for i in roads[id].values()]
 
+    interested = [276183, 276184, 275911, 275912, 276264, 276265]
     for id in roads.keys():
-        c = color.pop()
-        plt.scatter(range(144), roads[id], s=3, c=c, label = str(id))
+        if id in interested:
+            c = color.pop()
+            plt.scatter(range(144), roads[id], s=3, c=c, label = str(id))
     plt.legend()
     plt.show()
     # import csv
