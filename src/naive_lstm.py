@@ -22,8 +22,8 @@ class Dataset(Data.Dataset):
         rawX = rawData.iloc[:, 0:6].values
         rawY = rawData.iloc[:, 6:7].values
         self.size = len(rawX)
-        self.X = torch.tensor(rawX)
-        self.Y = torch.tensor(rawY)
+        self.X = torch.tensor(rawX, dtype=torch.double)
+        self.Y = torch.tensor(rawY, dtype=torch.double)
 
     def __len__(self):
         return self.size
@@ -84,11 +84,11 @@ def run(group_index):
     valid_data = DataLoader(dataset=valid_set, batch_size=batch_size, shuffle=True)
     net = naive_LSTM(input_size, output_size, True)
     para = net.parameters()
-    # optimizer = optim.Adam(para, lr=1e-03, betas=(0.9, 0.999))
-    optimizer = optim.RMSprop(para, lr=1e-03, momentum=0.9)
+    optimizer = optim.Adam(para, lr=1e-03, betas=(0.9, 0.999))
+    # optimizer = optim.RMSprop(para, lr=1e-03, momentum=0.9)
     vis = visdom.Visdom(env='naive_LSTM')
-    vis.line([[0.]], [0],win='train',opts=dict(title='losses', legend=['loss']))
-    bg = 1
+    vis.line([[0.]], [0],win='train', opts=dict(title='losses', legend=['loss']))
+    bg = 0
 
     def train(epoches):
         for epoch in range(epoches):
@@ -133,7 +133,7 @@ def run(group_index):
 
     def group_switch(road_id):
         g = str(gp.igmap(road_id))
-        net.load_state_dict(torch.load('./out/group_'+g+'_LSTM_100.pth'))
+        net.load_state_dict(torch.load('./out/group_'+g+'_bag8.pth'))
 
     def test():
         result = []
@@ -169,29 +169,31 @@ def run(group_index):
                 if count % 3 == 0:
                     road_ids.append(line[1])
                 count += 1
-        result = []
-        indi = 0
-        last_id = -1
-        for line in open("./train/processed/ToPredict.csv"):
-            line = line.split(",")[:6]
-            road_id = int(road_ids[indi])
-            if(last_id != road_id):
-                last_id = road_id
-            if(bg == 1):
-                for index in range(len(line)):
-                    line[index] = float(line[index])
-                for i in range(3):
-                    predi = 0
-                    for bag in range(10):
-                        bag_switch(road_id, bag)
-                        ipt_tensor = torch.from_numpy(np.array(line)).reshape(1, 6, output_size).double()
-                        predi += net(ipt_tensor).item()
-                    result.append(predi/10)
-                    line.pop(0)
-                    line.append(predi)
-                indi += 1
-            else:
-                group_switch(road_id)
+        all_result = []
+        for bag in range(10):
+            result = []
+            indi = 0
+            last_id = -1
+            for line in open("./train/processed/ToPredict.csv"):
+                line = line.split(",")[:6]
+                road_id = int(road_ids[indi])
+                if(last_id != road_id):
+                    last_id = road_id
+                # if(bg == 1):
+                #     for index in range(len(line)):
+                #         line[index] = float(line[index])
+                #     for i in range(3):
+                #         predi = 0
+                #         for bag in range(10):
+                #             bag_switch(road_id, bag)
+                #             ipt_tensor = torch.from_numpy(np.array(line)).reshape(1, 6, output_size).double()
+                #             predi += net(ipt_tensor).item()
+                #         result.append(predi/10)
+                #         line.pop(0)
+                #         line.append(predi)
+                #     indi += 1
+                # else:
+                bag_switch(road_id, bag)
                 for index in range(len(line)):
                     line[index] = float(line[index])
                 for i in range(3):
@@ -201,6 +203,21 @@ def run(group_index):
                     line.pop(0)
                     line.append(predi)
                 indi += 1
+            all_result.append(result)
+        result = []
+        for i in range(len(all_result[0])):
+            temp = []
+            for j in range(10):
+                temp.append(all_result[j][i])
+            temp.sort()
+            min_var = 100
+            s_index = 0
+            for k in range(5):
+                if(np.var(np.array(temp[k:k+4])) < min_var):
+                    min_var = np.var(np.array(temp[k:k+4]))
+                    s_index = k
+            temp = temp[s_index:s_index+4]
+            result.append(float(sum(temp))/len(temp))
         with open("./train/submit.csv", "a+", newline='') as objfile:
             obj_writer = csv.writer(objfile)
             obj_writer.writerow(["id_sample", "TTI"])
@@ -210,8 +227,8 @@ def run(group_index):
     
     def bagging(bags, epoches):
         for bag in range(bags):
-            sample_size = int(0.8 * train_size)
-            sample, _ = torch.utils.data.random_split(train_set, [sample_size, train_size-sample_size])
+            # sample_size = int(0.8 * train_size)
+            sample, _ = torch.utils.data.random_split(dataset, [train_size, valid_size])
             sample_data = DataLoader(dataset=sample, batch_size=batch_size, shuffle=True)
             for epoch in range(epoches):
                 net.train()
