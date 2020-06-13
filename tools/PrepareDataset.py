@@ -30,17 +30,34 @@ def devide_train_TTI_by_roadid():
 
     entries = []
     df = pd.read_csv("./asset/train_TTI.csv")
-    date = df["time"].apply(lambda x: x.split(" ")[0])
-    clock = df["time"].apply(lambda x: x.split(" ")[1])
-    df = df.drop("time", axis=1)
-    df["date"] = date
-    df["time"] = clock
+    # date = df["time"].apply(lambda x: x.split(" ")[0])
+    # clock = df["time"].apply(lambda x: x.split(" ")[1])
+    # df = df.drop("time", axis=1)
+    # df["date"] = date
+    # df["time"] = clock
 
     for road_id in set(df["id_road"]):
         save_csv = df[df["id_road"] == road_id]
         save_csv.to_csv("./train/processed/devided_train_TTI/"+str(road_id)+".csv", header=True, index=False)
 
     print("Finish deviding train_TTI by road id.")
+
+def check_and_fill_nan():
+    print("Start to check and fill nan.")
+    date_range1 = pd.date_range(start="2019-01-01 00:00:00", end="2019-03-31 23:50:00", freq="10T")
+    date_range2 = pd.date_range(start="2019-10-01 00:00:00", end="2019-12-21 23:50:00", freq="10T")
+    
+    for road_id in road_ids:
+        df = pd.read_csv("./train/processed/devided_train_TTI/"+str(road_id)+".csv")
+        df = df.set_index("time")
+        df = df.set_index(pd.to_datetime(df.index))
+
+        new_df1 = df.reindex(date_range1, fill_value=None)
+        new_df2 = df.reindex(date_range2, fill_value=None)
+        new_df = new_df1.append(new_df2)
+
+        new_df.to_csv("./train/processed/devided_train_TTI/"+str(road_id)+".csv", header=True, index=True)
+    print("Finish filling nan.")
 
 def prepare_train_set_group12():
     print("Start to prepare training set.")
@@ -52,9 +69,9 @@ def prepare_train_set_group12():
         print("\tAdd {} training set.".format(road_id))
         df1 = pd.read_csv(devided_csv_path+str(road_id)+".csv")
         total = df1.shape[0]
-        endpoint = 6
-        while endpoint <= total-1:
-            TTIs = list(df1.loc[endpoint-6:endpoint, "TTI"])
+        endpoint = 7
+        while endpoint <= total:
+            TTIs = list(df1.iloc[endpoint-7:endpoint]["TTI"])
             entries.append(TTIs)
             endpoint += 1
         save_csv = pd.DataFrame(data=entries)
@@ -84,9 +101,19 @@ def add_neighbour_info():
 
     print("Finish adding neighbour info.")
 
+def drop_nan():
+    print("Start to drop nan.")
+    train_csv_path = "./train/processed/to_train/"
+    for road_id in road_ids:
+        df1 = pd.read_csv(train_csv_path+"train_"+str(road_id)+".csv", index_col=False, header=None)
+        df1 = df1.dropna(axis=0)
+        df1.to_csv(train_csv_path+"train_"+str(road_id)+".csv", mode="w", index=False, header=False)
+    print("Finish dropping nan.")
 
 
 if __name__=="__main__":
     # devide_train_TTI_by_roadid()
+    # check_and_fill_nan()
     # prepare_train_set_group12()
-    add_neighbour_info()
+    # add_neighbour_info()
+    drop_nan()

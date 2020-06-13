@@ -14,6 +14,8 @@ from torch.utils.data import DataLoader
 sys.path.append(os.getcwd())
 
 road_ids = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
+# interested = [276265, 276737, 276738]
+interested = []
 feature_nums = {
     276183: 36, 276184: 36, 275911: 36, 275912: 36, 276240: 48, 276241: 48,  276264: 36, 276265: 36, 276268: 24, 276269: 24, 276737: 36, 276738: 36
 }
@@ -26,8 +28,8 @@ class Dataset(Data.Dataset):
         rawX = rawData.iloc[:, 0:feature_num].values
         rawY = rawData.iloc[:, feature_num:feature_num+1].values
         self.size = len(rawX)
-        self.X = torch.tensor(rawX)
-        self.Y = torch.tensor(rawY)
+        self.X = torch.tensor(rawX, dtype=torch.double)
+        self.Y = torch.tensor(rawY, dtype=torch.double)
         self.road_id = road_id
 
     def __len__(self):
@@ -63,7 +65,6 @@ class naive_LSTM(nn.Module):
                         nn.init.orthogonal(param)
 
     def forward(self, all_traj):
-        # 为啥要transpose
         traj = torch.transpose(all_traj, 0, 1)
         out, h = self.gru1(traj.double())
         out, h = self.gru2(out.double())
@@ -84,6 +85,8 @@ def prepare_dataset(road_id):
     whole_data = DataLoader(dataset=dataset, batch_size=batch_size)
     train_data = DataLoader(dataset=train, batch_size=batch_size, shuffle=True)
     valid_data = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True)
+    # train_data = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
+    # valid_data = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
 
     return whole_data, train_data, valid_data
 
@@ -91,9 +94,11 @@ def prepare_dataset(road_id):
 
 def train(net: naive_LSTM, train_data, epoches):
     optimizer = optim.RMSprop(net.parameters(), lr=1e-03, momentum=0.9)
+    c = 0
     for epoch in range(epoches):
         net.train()
         for batch_idx, (X, Y) in enumerate(train_data):
+            c+=1
 
             X = X.reshape(X.shape[0], 6, net.input_size).double()
             Y = Y.reshape(Y.shape[0], -1, net.output_size).double()
@@ -109,12 +114,14 @@ def train(net: naive_LSTM, train_data, epoches):
             loss.backward()
             optimizer.step()
 
-            if batch_idx % 10 == 0:
+            if c % 10 == 0:
                 # vis.line([loss.item()], [batch_idx + epoch * len(train_data)/batch_size], win='train', update='append')
-                print("batch: {}, loss {}".format(batch_idx + epoch * len(train_data), loss.item()))
+                print("batch: {}, loss {}".format(c, loss.item()))
 
         if epoch == 99:
-            torch.save(net.state_dict(), "./out/"+str(net.road_id)+".pth")
+            # torch.save(net.state_dict(), "./out/"+str(net.road_id)+".pth")
+            print("model for", net.road_id, "saved.")
+    return net
 
 def valid(net: naive_LSTM, valid_data):
     result = []
@@ -126,13 +133,13 @@ def valid(net: naive_LSTM, valid_data):
             Y = Y.reshape(Y.shape[0], -1, net.output_size).double()
 
             pred = net(X)
-            loss_fn = torch.nn.L1loss(reduce="mean")
+            loss_fn = torch.nn.L1Loss(reduce="mean")
             loss = loss_fn(pred, Y)
 
-            result.append(loss.item)
+            result.append(loss.item())
             # TODO check
             Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
-            pred = pred.reshape(X.shape[0], 1).numpy.tolist()
+            pred = pred.reshape(X.shape[0], 1).numpy().tolist()
             real_val += Y
             pre_val += pred
     print("performance on validation set is {}".format(sum(result)/len(result)))
@@ -143,10 +150,11 @@ def valid(net: naive_LSTM, valid_data):
 
 
 
-
 if __name__ == "__main__":
 
-    for road_id in road_ids:
+    to_train_list = road_ids if interested==[] else interested
+    print("Going to train", to_train_list)
+    for road_id in to_train_list:
         input_size = feature_nums[road_id] // 6
         output_size = 1
         # vis = visdom.Visdom(env='naive_LSTM')
@@ -159,6 +167,7 @@ if __name__ == "__main__":
         net = train(net, train_data, 100)
 
         valid(net, valid_data)
+
 
         
         
