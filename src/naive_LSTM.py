@@ -9,16 +9,13 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as Data
 from torch.utils.data import DataLoader
+from tools.PrepareDataset import *
+import copy
 # import visdom
 
 sys.path.append(os.getcwd())
 
-road_ids = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
-# interested = [276265, 276737, 276738]
-interested = []
-feature_nums = {
-    276183: 36, 276184: 36, 275911: 36, 275912: 36, 276240: 48, 276241: 48,  276264: 36, 276265: 36, 276268: 24, 276269: 24, 276737: 36, 276738: 36
-}
+# road_ids = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
 
 class Dataset(Data.Dataset):
     def __init__(self, path, road_id):
@@ -114,12 +111,12 @@ def train(net: naive_LSTM, train_data, epoches):
             loss.backward()
             optimizer.step()
 
-            if c % 10 == 0:
+            # if c % 10 == 0:
                 # vis.line([loss.item()], [batch_idx + epoch * len(train_data)/batch_size], win='train', update='append')
-                print("batch: {}, loss {}".format(c, loss.item()))
+                # print("batch: {}, loss {}".format(c, loss.item()))
 
         if epoch == 99:
-            # torch.save(net.state_dict(), "./out/"+str(net.road_id)+".pth")
+            torch.save(net.state_dict(), "./out/"+str(net.road_id)+".pth")
             print("model for", net.road_id, "saved.")
     return net
 
@@ -148,6 +145,74 @@ def valid(net: naive_LSTM, valid_data):
     plt.legend
     plt.show()
 
+def test_boost():
+    test_data = pd.read_csv("./test/processed/test_data.csv")
+    tot = test_data.shape[0]
+    nets = {}
+    for road_id in all_id:
+        nets[road_id] = naive_LSTM(feature_nums[road_id]//6, 1, road_id, False)
+        nets[road_id].load_state_dict(torch.load("./out/"+str(road_id)+".pth"))
+
+    test_result = copy.deepcopy(test_data)
+    groups = tot//12//3
+    for group_id in range(groups):
+        print("predicting for group", group_id)
+        first = group_id * 3 * 12
+        second = first + 12
+        third = second + 12
+
+        for idx in range(first, second):
+            road_id = test_result.iloc[idx, 1]
+            ipt = test_result.iloc[idx, 2:2+feature_nums[road_id]].values
+            ipt = np.asarray(ipt, dtype="float64")
+            ipt_tensor = torch.from_numpy(ipt.reshape(1, 6, -1)).double()
+            pred = nets[road_id](ipt_tensor).item()
+            test_result.loc[idx, "pred"] = pred
+
+        for idx in range(second, third):
+            road_id = test_result.iloc[idx, 1]
+            ipt = test_result.iloc[idx, 2:2+feature_nums[road_id]].values
+            ipt = np.asarray(ipt, dtype="float64")
+
+            first_frame = test_result.iloc[first:second]
+            neighbours = copy.deepcopy(neighbour_info[road_id])
+            neighbours.insert(0, road_id)
+            for i, neighbour in enumerate(neighbours):
+                ipt[i*6+5] = first_frame[first_frame["id_road"]==neighbour]["pred"].values[0]
+            ipt_tensor = torch.from_numpy(ipt.reshape(1, 6, -1)).double()
+            pred = nets[road_id](ipt_tensor).item()
+            test_result.loc[idx, "pred"] = pred
+
+        for idx in range(third, third+12):
+            road_id = test_result.iloc[idx, 1]
+            ipt = test_result.iloc[idx, 2:2+feature_nums[road_id]].values
+            ipt = np.asarray(ipt, dtype="float64")
+
+            first_frame = test_result.iloc[first:second]
+            second_frame = test_result.iloc[second:third]
+            neighbours = copy.deepcopy(neighbour_info[road_id])
+            neighbours.insert(0, road_id)
+            for i, neighbour in enumerate(neighbours):
+                ipt[i*6+4] = first_frame[first_frame["id_road"]==neighbour]["pred"].values[0]
+                ipt[i*6+5] = second_frame[second_frame["id_road"]==neighbour]["pred"].values[0]
+            ipt_tensor = torch.from_numpy(ipt.reshape(1, 6, -1)).double()
+            pred = nets[road_id](ipt_tensor).item()
+            test_result.loc[idx, "pred"] = pred
+
+    # test_result = test_result.set_index(test_result["id_sample"])
+    # test_result.sort_index()
+    test_result = test_result.sort_values(by="id_sample", ascending=True)
+    test_result.to_csv("./out/test_result.csv", index=False)
+    submit = test_result[["id_sample", "pred"]]
+    submit.rename(columns={"pred":"TTI"}, inplace=True)
+    submit.to_csv("./out/submit1.csv", index=False, header=True)
+    
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -167,7 +232,7 @@ if __name__ == "__main__":
         net = train(net, train_data, 100)
 
         valid(net, valid_data)
-
+    test_boost()
 
         
         

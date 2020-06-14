@@ -1,7 +1,7 @@
 import os
 import re
 
-pwd = os.getcwd() + r'\tools'# 替换成当前目录
+pwd = os.getcwd() +"/tools"# 替换成当前目录
 kill = 0
 namelist = []
 for filename in os.listdir(pwd):
@@ -14,7 +14,7 @@ if(kill > 1):
         os.remove(pwd+"\\"+name)
     
 count = 0
-for line in open("./train/submit.csv"):
+for line in open("./out/submit.csv"):
     line = line.split(',')
     if(count == 0):
         assert(line[0] == 'id_sample')

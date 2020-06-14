@@ -2,6 +2,7 @@ import csv
 import pandas as pd
 import os
 import sys
+import copy
 """
     devide_train_TTI_by_roadid():   将train_TTI按照道路分组， 输出到train/processed/devided_train_TTI目录下
     check_and_fill_nan():           对按道路分割后的数据集文件进行日期补全。也就是在2019-01-01 00：00：00～2019-03-31 23：50：00
@@ -13,8 +14,11 @@ import sys
 
 sys.path.append(os.getcwd())
 
+interested = [276737, 276738]
+
 gp_num = 12
 road_ids = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
+all_id = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
 neighbour_info = {
     276183: [276184, 275911, 275912, 276264, 276265], 
     276184: [276183, 275911, 275912, 276264, 276265], 
@@ -28,6 +32,9 @@ neighbour_info = {
     276269: [276268, 276240, 276241], 
     276737: [276738, 276240, 276241, 276264, 276265], 
     276738: [276737, 276240, 276241, 276264, 276265]
+}
+feature_nums = {
+    276183: 36, 276184: 36, 275911: 36, 275912: 36, 276240: 48, 276241: 48,  276264: 36, 276265: 36, 276268: 24, 276269: 24, 276737: 36, 276738: 36
 }
 
 def devide_train_TTI_by_roadid():
@@ -115,10 +122,109 @@ def drop_nan():
         df1.to_csv(train_csv_path+"train_"+str(road_id)+".csv", mode="w", index=False, header=False)
     print("Finish dropping nan.")
 
+def prepare_test_dataset():
+    trainTTI = pd.read_csv("./test/toPredict_train_TTI.csv", index_col=None)
+
+    for road_id in road_ids:
+        save_csv = trainTTI[trainTTI["id_road"] == road_id]
+        save_csv.to_csv("./test/processed/devided_train_TTI/"+str(road_id)+".csv", header=True, index=False)
+
+def check_and_fill_nan_test():
+    print("Start to check and fill nan in test dateset.")
+    date1 = ["2019-12-21", "2019-12-22", "2019-12-23", "2019-12-24", "2019-12-25", "2019-12-26"]
+    clock1 = ["07:30:00", "09:30:00", "11:30:00", "13:30:00", "15:30:00", "17:30:00", "19:30:00"]
+    date2 = ["2019-12-27", "2019-12-28", "2019-12-29", "2019-12-30", "2019-12-31", "2020-01-01"]
+    clock2 = ["08:00:00", "10:00:00", "12:00:00", "14:00:00", "16:00:00", "18:00:00", "20:00:00"]
+    date_ranges = []
+    for date in date1:
+        for clock in clock1:
+            tmp = pd.date_range(start=" ".join([date, clock]), periods=9, freq="10T")
+            date_ranges.append(tmp)
+    for date in date2:
+        for clock in clock2:
+            tmp = pd.date_range(start=" ".join([date, clock]), periods=9, freq="10T")
+            date_ranges.append(tmp)
+    print("date range generated:", date_ranges)
+
+    for road_id in road_ids:
+        df = pd.read_csv("./test/processed/devided_train_TTI/"+str(road_id)+".csv")
+        df = df.set_index("time")
+        df = df.set_index(pd.to_datetime(df.index))
+
+        new_dfs = [df.reindex(i, fill_value=None) for i in date_ranges]
+        new_df = pd.concat(new_dfs, axis=0)
+
+        new_df.to_csv("./test/processed/devided_train_TTI/"+str(road_id)+".csv", header=True, index=True)
+    print("Finish checking and filling nan into test dataset.")
+
+def construct_test_dataset():
+    print("Start to construct test data. May take 1 min.")
+    nolabel = pd.read_csv("./test/toPredict_noLabel.csv", index_col=None)
+    nolabel["time"] = pd.to_datetime(nolabel["time"])
+    nolabel = nolabel.set_index("time")
+    nolabel = nolabel.sort_index()
+    
+    all_csvs = {}
+    entry = []
+    entries = []
+    for road_id in all_id:
+        tmp = pd.read_csv("./test/processed/devided_train_TTI/"+str(road_id)+".csv", index_col=0)
+        tmp = tmp.set_index(pd.to_datetime(tmp.index))
+        all_csvs[road_id] = tmp
+    for time, row in nolabel.iterrows():
+        road_id = row["id_road"]
+        neighbours = copy.deepcopy(neighbour_info[road_id])
+        neighbours.insert(0, road_id)
+        date_range = pd.date_range(end=str(time), periods=7, freq="10T")[0:-1]
+        for neighbour in neighbours:
+            tmp = all_csvs[neighbour].reindex(date_range, fill_value=None)["TTI"]
+            tmp = list(tmp)
+            entry += tmp
+        entries.append(entry)
+        entry = []
+
+    test = pd.DataFrame(entries, index=nolabel.index)
+    test = pd.concat([nolabel, test], axis=1)
+    test.to_csv("./test/processed/test_data.csv", index=False, header=True)
+    print("test data constructed.")
+
+            
+
+
+
+
+    # # trainTTI = trainTTI.set_index("time")
+    # # trainTTI = trainTTI.set_index(pd.to_datetime(trainTTI.index))
+    # trainTTI["time"] = pd.to_datetime(trainTTI["time"])
+    # trainTTI = trainTTI.set_index(["time", "id_road"])
+
+    # nolabel = nolabel.drop(["id_sample"], axis=1)
+    # nolabel = nolabel.sort_index()
+
+    # Topredict = copy.deepcopy(nolabel)
+    # for index, row in nolabel.iterrows():
+    #     date_range = pd.date_range(end=index, periods=6, freq="10T")
+    #     entry = []
+    #     neighbours = neighbour_info[row["id_road"]]
+    #     neighbours.insert(0, row["id_road"])
+    #     print(neighbours)
+        
+    #     new_df = pd.DataFrame()
+    #     for neighbour in neighbours:
+    #         tmp = trainTTI.reindex([date_range, row["id_road"]])
+
+
 
 if __name__=="__main__":
+    if interested==[]:
+        pass
+    else:
+        road_ids = interested
     # devide_train_TTI_by_roadid()
     # check_and_fill_nan()
     # prepare_train_set_group12()
-    # add_neighbour_info()
+    add_neighbour_info()
     drop_nan()
+    prepare_test_dataset()
+    check_and_fill_nan_test()
+    construct_test_dataset()
