@@ -145,31 +145,6 @@ def valid(net: naive_LSTM, valid_data):
     plt.legend
     plt.show()
 
-def valid_test(net, valid_data):
-    result = []
-    real_val = []
-    pre_val = []
-    net.load_state_dict(torch.load("./out/"+str(net.road_id)+".pth"))
-    with torch.no_grad():
-        for batch_idx, (X,Y) in enumerate(valid_data):
-            X = X.reshape(X.shape[0], 6, net.input_size).double()
-            Y = Y.reshape(Y.shape[0], -1, net.output_size).double()
-
-            pred = net(X)
-            loss_fn = torch.nn.L1Loss(reduce="mean")
-            loss = loss_fn(pred, Y)
-
-            result.append(loss.item())
-            # TODO check
-            Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
-            pred = pred.reshape(X.shape[0], 1).numpy().tolist()
-            real_val += Y
-            pre_val += pred
-    print("performance on validation set is {}".format(sum(result)/len(result)))
-    plt.plot(real_val, label="real")
-    plt.plot(pre_val, label="pred")
-    plt.legend
-    plt.show()
 
 def test_boost():
     test_data = pd.read_csv("./test/processed/test_data.csv")
@@ -233,8 +208,41 @@ def test_boost():
     submit.rename(columns={"pred":"TTI"}, inplace=True)
     submit.to_csv("./out/submit1.csv", index=False, header=True)
     
+def valid_on_sequence():
+    for road_id in road_ids:
+        dataset = Dataset("./train/processed/to_train/train_"+str(road_id)+".csv", road_id)
 
+        whole_data = DataLoader(dataset=dataset, batch_size=batch_size)
+        net = naive_LSTM(feature_nums[road_id]//6, 1, road_id, False)
+        net.load_state_dict(torch.load("./out/"+str(road_id)+".pth"))
 
+        result = []
+        real_val = []
+        pre_val = []
+        with torch.no_grad():
+            for batch_idx, (X,Y) in enumerate(whole_data):
+                X = X.reshape(X.shape[0], 6, net.input_size).double()
+                Y = Y.reshape(Y.shape[0], -1, net.output_size).double()
+
+                pred = net(X)
+                loss_fn = torch.nn.L1Loss(reduce="mean")
+                loss = loss_fn(pred, Y)
+
+                result.append(loss.item())
+            # TODO check
+                Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
+                pred = pred.reshape(X.shape[0], 1).numpy().tolist()
+                real_val += Y
+                pre_val += pred
+                if batch_idx >= 4:
+                    break
+        print("performance on validation set is {}".format(sum(result)/len(result)))
+        plt.plot(real_val, label="real")
+        plt.plot(pre_val, label="pred")
+        plt.legend
+        plt.show()
+
+    
 
 
 
@@ -243,24 +251,25 @@ def test_boost():
 
 if __name__ == "__main__":
 
-    to_train_list = road_ids if interested==[] else interested
-    print("Going to train", to_train_list)
-    for road_id in to_train_list:
-        print("road_id: ", road_id)
-        input_size = feature_nums[road_id] // 6
-        output_size = 1
-        # vis = visdom.Visdom(env='naive_LSTM')
-        # vis.line([[0.]], [0],win='train',opts=dict(title='losses', legend=['loss']))
+    # to_train_list = road_ids if interested==[] else interested
+    # print("Going to train", to_train_list)
+    # for road_id in to_train_list:
+    #     print("road_id: ", road_id)
+    #     input_size = feature_nums[road_id] // 6
+    #     output_size = 1
+    #     # vis = visdom.Visdom(env='naive_LSTM')
+    #     # vis.line([[0.]], [0],win='train',opts=dict(title='losses', legend=['loss']))
 
-        whole_data, train_data, valid_data = prepare_dataset(road_id)
+    #     whole_data, train_data, valid_data = prepare_dataset(road_id)
 
-        net = naive_LSTM(input_size, output_size, road_id, True)
+    #     net = naive_LSTM(input_size, output_size, road_id, True)
 
-        net = train(net, train_data, 100)
+    #     net = train(net, train_data, 100)
 
-        valid(net, valid_data)
-        # valid_test(net, valid_data)
-    test_boost()
+    #     valid(net, valid_data)
+    # test_boost()
+
+    valid_on_sequence()
 
         
         

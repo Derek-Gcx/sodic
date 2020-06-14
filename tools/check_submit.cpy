@@ -14,7 +14,7 @@ if(kill > 1):
         os.remove(pwd+"\\"+name)
     
 count = 0
-for line in open("./out/submit.csv"):
+for line in open("./out/submit1.csv"):
     line = line.split(',')
     if(count == 0):
         assert(line[0] == 'id_sample')
