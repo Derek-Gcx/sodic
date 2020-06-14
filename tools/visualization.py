@@ -360,7 +360,7 @@ def show_avg_TTI_around_year():
     for id in roads.keys():
         roads[id] = [sum(i)/len(i) for i in roads[id].values()]
 
-    interested = [276738, 276737, 276240, 276241, 276264, 276265]
+    interested = [276265, 276264, 276183, 276184, 276737, 276738]
     for id in roads.keys():
         if id in interested:
             c = color.pop()

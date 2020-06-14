@@ -74,7 +74,7 @@ batch_size=1024
 
 def prepare_dataset(road_id):
     dataset = Dataset("./train/processed/to_train/train_"+str(road_id)+".csv", road_id)
-    train_size = int(0.8*len(dataset))
+    train_size = int(0.9*len(dataset))
     valid_size = len(dataset) - train_size
 
     train, valid = torch.utils.data.random_split(dataset, [train_size, valid_size])
@@ -124,6 +124,32 @@ def valid(net: naive_LSTM, valid_data):
     result = []
     real_val = []
     pre_val = []
+    with torch.no_grad():
+        for batch_idx, (X,Y) in enumerate(valid_data):
+            X = X.reshape(X.shape[0], 6, net.input_size).double()
+            Y = Y.reshape(Y.shape[0], -1, net.output_size).double()
+
+            pred = net(X)
+            loss_fn = torch.nn.L1Loss(reduce="mean")
+            loss = loss_fn(pred, Y)
+
+            result.append(loss.item())
+            # TODO check
+            Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
+            pred = pred.reshape(X.shape[0], 1).numpy().tolist()
+            real_val += Y
+            pre_val += pred
+    print("performance on validation set is {}".format(sum(result)/len(result)))
+    plt.plot(real_val, label="real")
+    plt.plot(pre_val, label="pred")
+    plt.legend
+    plt.show()
+
+def valid_test(net, valid_data):
+    result = []
+    real_val = []
+    pre_val = []
+    net.load_state_dict(torch.load("./out/"+str(net.road_id)+".pth"))
     with torch.no_grad():
         for batch_idx, (X,Y) in enumerate(valid_data):
             X = X.reshape(X.shape[0], 6, net.input_size).double()
@@ -220,6 +246,7 @@ if __name__ == "__main__":
     to_train_list = road_ids if interested==[] else interested
     print("Going to train", to_train_list)
     for road_id in to_train_list:
+        print("road_id: ", road_id)
         input_size = feature_nums[road_id] // 6
         output_size = 1
         # vis = visdom.Visdom(env='naive_LSTM')
@@ -232,6 +259,7 @@ if __name__ == "__main__":
         net = train(net, train_data, 100)
 
         valid(net, valid_data)
+        # valid_test(net, valid_data)
     test_boost()
 
         

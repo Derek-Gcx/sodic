@@ -14,7 +14,8 @@ import copy
 
 sys.path.append(os.getcwd())
 
-interested = [276737, 276738]
+# interested = [276738]
+interested = []
 
 gp_num = 12
 road_ids = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
@@ -30,11 +31,11 @@ neighbour_info = {
     276265: [276264, 276183, 276184, 276737, 276738], 
     276268: [276269, 276240, 276241], 
     276269: [276268, 276240, 276241], 
-    276737: [276738, 276240, 276241, 276264, 276265], 
-    276738: [276737, 276240, 276241, 276264, 276265]
+    276737: [276738, 276264, 276265], 
+    276738: [276737,276240, 276241, 276264, 276265]
 }
 feature_nums = {
-    276183: 36, 276184: 36, 275911: 36, 275912: 36, 276240: 48, 276241: 48,  276264: 36, 276265: 36, 276268: 24, 276269: 24, 276737: 36, 276738: 36
+    276183: 36, 276184: 36, 275911: 36, 275912: 36, 276240: 48, 276241: 48,  276264: 36, 276265: 36, 276268: 24, 276269: 24, 276737: 24, 276738: 36
 }
 
 def devide_train_TTI_by_roadid():
@@ -59,7 +60,7 @@ def check_and_fill_nan():
     date_range1 = pd.date_range(start="2019-01-01 00:00:00", end="2019-03-31 23:50:00", freq="10T")
     date_range2 = pd.date_range(start="2019-10-01 00:00:00", end="2019-12-21 23:50:00", freq="10T")
     
-    for road_id in road_ids:
+    for road_id in all_id:
         df = pd.read_csv("./train/processed/devided_train_TTI/"+str(road_id)+".csv")
         df = df.set_index("time")
         df = df.set_index(pd.to_datetime(df.index))
@@ -222,7 +223,7 @@ if __name__=="__main__":
         road_ids = interested
     # devide_train_TTI_by_roadid()
     # check_and_fill_nan()
-    # prepare_train_set_group12()
+    prepare_train_set_group12()
     add_neighbour_info()
     drop_nan()
     prepare_test_dataset()
