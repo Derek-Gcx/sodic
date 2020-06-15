@@ -57,39 +57,6 @@ def getRoadID(lng, lat, direction):
     #     return ret
 
 
-# def rewrite_dataset():
-#     for line in open("./train/toPredict_train_gps.csv"):
-    
-#         traj = []
-
-#         illegal_char = ["[", "\"", "]"]
-#         for char in illegal_char:
-#             line = line.replace(char, "")
-#         gps_records = line.split(",")[2:]
-
-#         for record in gps_records:
-#             lng, lat, speed, direction, seconds = [eval(i) for i in record.strip().split(" ")]
-
-#             clock = tuple(time.gmtime(seconds))[0:6]
-#             road_id = getRoadID(lng, lat, direction)
-#             if road_id == []:
-
-#                 continue 
-
-#             # 写入数据entry的结构: [路的ID, 经度, 纬度, 方向, 速度, 时间(年, 月, 日, 时, 分, 秒)]
-#             traj.append([road_id, lng, lat, direction, speed, clock])
-
-
-#             if len(traj) == batch_size:
-#                 # plt.scatter([i[1] for i in traj], [i[2] for i in traj], c="g")
-                
-#                 with open("./train/processed/gcx.csv", "a+", newline='') as objfile:
-#                     obj_writer = csv.writer(objfile)
-#                     obj_writer.writerows(traj)
-#                 traj = []
-#                 plt.show()
-#                 # assert False
-
 def show_trace():
     line_counter = 0
     useless_x = list()
