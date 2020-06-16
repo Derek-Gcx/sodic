@@ -86,8 +86,6 @@ def rewriteDataset():
 
 def calculate(buffer):
     buffer = np.array(buffer)
-    for i in range(len(buffer)):
-        buf.append(time.gmtime(buffer[i][1]))
     start = time.gmtime(buffer[0][1])
     length = len(buffer)
     result = []
@@ -147,7 +145,7 @@ def extractData():
             if buffer != []:
                 processed = calculate(buffer)
                 for entry in processed:
-                    dict_list[gp.igmap(road_id)][(road_id, entry[0])].append(entry[1])
+                    dict_list[gp.igmap(road_id)][entry[0]].append(entry[1])
     for i in range(12):
         data_dict = dict_list[i]
         with open("./train/processed/gps/" + str(i) + ".csv", "w+", newline='') as objfile:
