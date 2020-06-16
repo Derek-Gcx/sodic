@@ -99,8 +99,11 @@ def rewrite_dataset():
 
                 # 确定日期
                 lng, lat, speed, direction, seconds = [eval(i) for i in gps_records[0].strip().split(" ")]
-                time_stamp = time.gmtime(seconds)
+                time_stamp = time.gmtime(seconds+28800)
                 date = str(time_stamp[1])+str(time_stamp[2])
+                # if time_stamp[3] <=6 or time_stamp[3] >= 22:
+                #     line = fp.readline()
+                #     continue
                 if date not in dates:
                     dates.add(date)
                     entries[date] = []
