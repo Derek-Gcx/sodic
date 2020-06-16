@@ -11,8 +11,6 @@ for k in range(1,21):
         line2=[list(map(eval,item)) for item in line1]
         df=pd.DataFrame([[int(x[0]),x[1]*3.6,x[2]*6+x[3]//10] for x in line2])
         total=total.append(df,ignore_index=True)
-    if(len(total)>1200000):
-        break
     
     total.columns=['road_id','speed','time_block']
     G=total.groupby(['road_id','time_block']).agg(['min', 'max','mean','std']).reset_index()
