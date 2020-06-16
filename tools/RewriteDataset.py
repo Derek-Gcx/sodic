@@ -87,7 +87,7 @@ def rewrite_dataset():
     count = 0
     ok = 1
     try:
-        with open(GPS3, "r") as fp:
+        with open(GPS1, "r") as fp:
             line = fp.readline()
             while line:
                 count += 1
@@ -108,7 +108,7 @@ def rewrite_dataset():
                 df = [[eval(i) for i in j.strip().split(" ")] for j in gps_records]
                 df = pd.DataFrame(data=df, columns=["lng", "lat", "speed", "direction", "seconds"])
                 df["road_id"] = df.apply(lambda x:getRoadID(x["lng"], x["lat"], x["direction"]), axis=1)
-                df["time"] = df.apply(lambda x:time.gmtime(x["seconds"])[3:6], axis=1)
+                df["time"] = df.apply(lambda x:time.gmtime(x["seconds"]+28800)[3:6], axis=1)
 
                 df = df[df["road_id"]!=0][["road_id", "speed", "time"]]
 
@@ -120,7 +120,7 @@ def rewrite_dataset():
 
                 for d in dates:
                     if len(entries[d]) == 1024:
-                        with open("./train/201910_11/"+d+".csv", "a", newline="") as file:
+                        with open("./train/201912/"+d+".csv", "a", newline="") as file:
                             writer = csv.writer(file)
                             writer.writerows(entries[d])
                             entries[d] = []
