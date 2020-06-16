@@ -87,7 +87,7 @@ def rewrite_dataset():
     count = 0
     ok = 1
     try:
-        with open(GPS1, "r") as fp:
+        with open(GPS3, "r") as fp:
             line = fp.readline()
             while line:
                 count += 1
@@ -120,7 +120,7 @@ def rewrite_dataset():
 
                 for d in dates:
                     if len(entries[d]) == 1024:
-                        with open("./train/201912/"+d+".csv", "a", newline="") as file:
+                        with open("./train/201910_11/"+d+".csv", "a", newline="") as file:
                             writer = csv.writer(file)
                             writer.writerows(entries[d])
                             entries[d] = []
