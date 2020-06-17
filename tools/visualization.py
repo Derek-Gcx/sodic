@@ -374,6 +374,21 @@ def show_avg_TTI_around_year():
     return roads
 
 
+def vvv():
+    with open("./asset/train_TTI.csv", "r") as fp:
+        current = 0
+        line = fp.readline()
+        line = fp.readline()
+
+        while line:
+            line = line.split(",")
+            road_id = eval(line[0])
+            TTI = eval(line[1])
+            clock = line[-1].split(" ")[-1].split(":")
+            time_stamp = int(clock[0])*6 + int(clock[1]) // 10
+            roads[road_id][time_stamp].append(TTI)
+
+            line = fp.readline()
 
 
 

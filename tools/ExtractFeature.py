@@ -18,7 +18,7 @@ GPSs = [
 
 
 def extract_feature():
-    out_path = "./train/processed/feature/"
+    out_path = "./train/processed/feature/201912/"
     out_csvs = {}
 
     for GPS in GPSs:
@@ -30,10 +30,10 @@ def extract_feature():
             entries = pd.DataFrame(entries)
 
             global user_road_time
-            user_road_time = pd.DataFrame(columns=["id", "road_id", "time", "speed_avg_car", "speed_min_car", "speed_max_car", "speed_var_car"])
-            entries["speed_avg_car"] = entries.apply(lambda x: merge(get_feature(x, file[0:4])), axis=1)
+            user_road_time = pd.DataFrame(columns=["road_id", "time", "avg", "low_speed_ratio", "high_speed_ratio", "is_low", "is_high"])
+            entries.apply(lambda x: merge(get_feature(x, file[0:4])), axis=1)
 
-            prod = user_road_time.groupby(by=["road_id", "time"], as_index=False).agg({"id": lambda x:len(x), "speed_avg_car": "mean", "speed_min_car": "min", "speed_max_car": "max", "speed_var_car": "mean"})
+            prod = user_road_time.groupby(by=["road_id", "time"], as_index=False).agg({"avg": "mean", "low_speed_ratio": "mean", "high_speed_ratio": "mean", "is_low": "mean", "is_high": "mean"})
 
             for road_id in prod["road_id"].unique():
                 out_csvs[road_id] = prod[prod["road_id"]==road_id].iloc[:, 1:]
@@ -50,11 +50,15 @@ def get_feature(x: pd.Series, date):
     x = pd.DataFrame(x.to_list(), columns=["road_id", "speed", "clock"])
     x = x[x["speed"] <= 30]
     x["clock"] = x.apply(lambda x: pd.Timestamp(2019, int(date[0:2]), int(date[2:]), x["clock"][0], x["clock"][1]//10*10, 0), axis=1)
-    ret = x.groupby(by=["road_id", "clock"], as_index=False).agg({"speed": ["mean", "min", "max", lambda x:x.var(), lambda x:len(x)]})
-    ret.columns=["road_id", "time", "speed_avg_car", "speed_min_car", "speed_max_car", "speed_var_car", "count"]
+
+    ret = x.groupby(by=["road_id", "clock"], as_index=False).agg({"speed": ["mean", lambda x:len(x), lambda x:sum(x<=6)/len(x), lambda x:sum(x>=13)/len(x)]})
+
+    ret.columns=["road_id", "time", "avg", "count", "low_speed_ratio", "high_speed_ratio"]
     ret = ret[ret["count"]>=5]
-    ret["speed_min_car"].where(ret["speed_min_car"]>=0, 0, inplace=True)
-    ret["id"] = name
+
+    ret["is_low"] = (ret["avg"] <= 6).astype(np.float64)
+    ret["is_high"] = (ret["avg"] >= 14).astype(np.float64)
+
 
     del ret["count"]
     return ret

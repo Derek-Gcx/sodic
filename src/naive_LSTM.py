@@ -239,7 +239,7 @@ def valid_on_sequence():
         print("performance on validation set is {}".format(sum(result)/len(result)))
         plt.plot(real_val, label="real")
         plt.plot(pre_val, label="pred")
-        plt.legend
+        plt.legend()
         plt.show()
 
     

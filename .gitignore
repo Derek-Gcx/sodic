@@ -109,3 +109,4 @@ train/*
 out/*
 pic/*
 .vscode/*
+log
