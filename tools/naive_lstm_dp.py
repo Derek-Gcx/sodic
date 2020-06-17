@@ -256,6 +256,6 @@ def clear():
 
 
 if __name__ == '__main__':
-    clear()
+    # clear()
     train_dp_withgroup()
     test_dp()

@@ -40,12 +40,23 @@ class naive_LSTM(nn.Module):
         self.output_size = output_size
         self.is_training = is_training
         # self.lstm = nn.LSTM(input_size, 16, 1).double()
-        self.gru1 = nn.GRU(input_size, 16, 1, dropout=0.2).double()
-        self.gru2 = nn.GRU(16, 32, 1, dropout=0.2, bidirectional=True).double()
-        mlp_list = [
-            nn.Linear(32, 8),
-            nn.Linear(8, output_size)
-        ]
+        # self.gru1 = nn.GRU(input_size, 16, 1, dropout=0.2).double()
+        self.gru = nn.GRU(input_size, 64, 2, dropout=0.2, bidirectional=True).double()
+        nerus = [64, 128, 16, output_size]
+        drop_rate = [0.2, 0.1, 0.1]
+        mlp_list = []
+        for i in range(len(nerus) - 1):
+            mlp_i = nn.Sequential(
+                nn.Linear(nerus[i], nerus[i+1]),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(nerus[i+1]),
+                nn.Dropout(drop_rate[i])
+            )
+            mlp_list.append(mlp_i)
+        # mlp_list = [
+        #     nn.Linear(32, 8),
+        #     nn.Linear(8, output_size)
+        # ]
         self.mlp = nn.Sequential(*mlp_list).double()
 
         # 初始化参数
@@ -56,17 +67,17 @@ class naive_LSTM(nn.Module):
             elif isinstance(m, nn.GRU):
                 for name, param in m.named_parameters():
                     if 'bias' in name:
-                        nn.init.constant(param, 0.0)
+                        nn.init.constant_(param, 0.0)
                     elif 'weight' in name:
-                        nn.init.orthogonal(param)
+                        nn.init.orthogonal_(param)
 
     def forward(self, all_traj):
         # lstm_out, (h, c) = self.lstm(torch.transpose(all_traj, 0, 1).double())
         traj = torch.transpose(all_traj, 0, 1)
-        out, h = self.gru1(traj.double())
-        out, h = self.gru2(out.double())
-        h = torch.sum(h, 0).reshape(1, h.shape[1], -1)
-        z = self.mlp(torch.transpose(h, 0, 1))
+        out, h = self.gru(traj.double())
+        # out, h = self.gru2(out.double())
+        h = torch.sum(h, 0).reshape(h.shape[1], -1)
+        z = self.mlp(h)
         return z
 
 
@@ -95,10 +106,12 @@ def run(group_index):
             net.train()
             for batch_idx, (X, Y) in enumerate(train_data):
                 X = X.reshape(X.shape[0], 6, input_size).double()
-                Y = Y.reshape(Y.shape[0], -1, output_size).double()
+                # Y = Y.reshape(Y.shape[0], output_size).double()
                 predi = net(X)
-                loss_fn = torch.nn.L1Loss(reduce='mean')
+                loss_fn = torch.nn.L1Loss(reduction='mean')
+                # loss_out = torch.nn.L1Loss(reduction='mean')
                 assert(predi.shape == Y.shape)
+                # loss = nn.functional.mse_loss(predi, Y)
                 loss = loss_fn(predi, Y)
                 net.zero_grad()
                 loss.backward()
@@ -247,13 +260,13 @@ def run(group_index):
                         print("batch: {}, loss {}".format(batch_idx + epoch * len(dataset)/batch_size, loss.item()))
             torch.save(net.state_dict(), './out/group_'+group+'_bag'+str(bag)+'.pth')
 
-    # train(100)
+    train(100)
     # bagging(10, 100)
     # net.load_state_dict(torch.load('./out/group_'+group+'_LSTM_100.pth'))
     # valid()
     # test()
-    if(group == "11"):
-        boost_test()
+    # if(group == "11"):
+    #     boost_test()
 
 
 if __name__ == "__main__":
