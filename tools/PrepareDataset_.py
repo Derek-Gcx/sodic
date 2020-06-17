@@ -32,19 +32,20 @@ def total_date_range():
 def merge_dataset():
     for road_id in all_id:
         df1 = pd.read_csv("./train/processed/devided_train_TTI/"+str(road_id)+".csv", index_col=0)
-        df2 = pd.read_csv("./train/processed/feature/"+str(road_id)+".csv", index_col=0, header=None)
-        df2.columns=["count", "avg", "min", "max", "var"]
+        df2 = pd.read_csv("./train/processed/feature/201910_11/"+str(road_id)+".csv", index_col=0, header=None)
+        df2.columns=["avg", "low2"]
 
         df1 = df1.set_index(pd.to_datetime(df1.index))
+        df2 = df2.set_index(pd.to_datetime(df2.index))
         # 添加时区转换
-        df2 = df2.set_index(pd.to_datetime(pd.to_datetime(df2.index, utc=True).tz_convert("Asia/SHanghai").strftime("%Y-%m-%d %H:%M:%S")))
+        # df2 = df2.set_index(pd.to_datetime(pd.to_datetime(df2.index, utc=True).tz_convert("Asia/SHanghai").strftime("%Y-%m-%d %H:%M:%S")))
 
         interested = interested_date_range()
         tot = total_date_range()
         df1 = df1.reindex(index=tot, fill_value=0)
         del df1["id_road"]
         df2 = df2.reindex(index=tot, fill_value=0)
-        df2["margin"] = df2["max"]-df2["min"]
+        # df2["margin"] = df2["max"]-df2["min"]
         # del df2["max"]
         # del df2["min"]
 
@@ -61,16 +62,25 @@ def merge_dataset():
         a = df["TTI"].iloc[1:].values
         df = df.iloc[:-1]
         df["label"] = a
+        df["label"] = df["label"] * 5
         
 
         df["speed"] = df["speed"]/3.6
+        # df["low1"] = df["low1"] * 5
+        df["low2"] = df["low2"] * 5
+        # df["high1"] = df["high1"] * 5
+        # df["high2"] = df["high1"] * 5
+        # df["margin"] = df["high1"]-df["low1"]
         # df["TTI"] = df["TTI"]*10
-        df["count"] = df["count"] / 10
+        # df["count"] = df["count"] / 10
 
         df = df.reindex(index=interested, fill_value=0)
 
         df["TTI"] = df["TTI"]*10
-        df["label"] = df["label"] * 10
+        # df["label"] = df["label"] * 10
+
+        print(df.corr())
+
         df.iloc[:80].plot()
         plt.show()
 
