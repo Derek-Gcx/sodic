@@ -28,6 +28,21 @@ groupDict = {
     276738: 11
 }
 
+inverseDict = {
+    0: 276183,
+    1: 276184,
+    2: 275911,
+    3: 275912,
+    4: 276240,
+    5: 276241,
+    6: 276264,
+    7: 276265,
+    8: 276268,
+    9: 276269,
+    10: 276737,
+    11: 276738
+}
+
 
 def iimap(road_id):
     return roadDict.get(road_id, -1)
@@ -35,3 +50,7 @@ def iimap(road_id):
 
 def igmap(road_id):
     return groupDict.get(road_id, -1)
+
+
+def iv_map(group):
+    return inverseDict.get(group, -1)

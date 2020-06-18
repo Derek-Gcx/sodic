@@ -19,8 +19,8 @@ import tools.group as gp
 class Dataset(Data.Dataset):
     def __init__(self, path):
         rawData = pd.DataFrame(pd.read_csv(path, header=None))
-        rawX = rawData.iloc[:, 0:6].values
-        rawY = rawData.iloc[:, 6:7].values
+        rawX = rawData.iloc[:, 0:42].values
+        rawY = rawData.iloc[:, 42:].values
         self.size = len(rawX)
         self.X = torch.tensor(rawX, dtype=torch.double)
         self.Y = torch.tensor(rawY, dtype=torch.double)
@@ -41,9 +41,9 @@ class naive_LSTM(nn.Module):
         self.is_training = is_training
         # self.lstm = nn.LSTM(input_size, 16, 1).double()
         # self.gru1 = nn.GRU(input_size, 16, 1, dropout=0.2).double()
-        self.gru = nn.GRU(input_size, 64, 2, dropout=0.2, bidirectional=True).double()
-        nerus = [64, 128, 16, output_size]
-        drop_rate = [0.2, 0.1, 0.1]
+        self.gru = nn.GRU(input_size, 32, 2, dropout=0.2, bidirectional=True).double()
+        nerus = [32, 64, 16, output_size]
+        drop_rate = [0.1, 0.1, 0]
         mlp_list = []
         for i in range(len(nerus) - 1):
             mlp_i = nn.Sequential(
@@ -82,11 +82,11 @@ class naive_LSTM(nn.Module):
 
 
 def run(group_index):
-    group = str(group_index)
-    input_size = 1
-    output_size = 1
+    road_id = str(gp.iv_map(group_index))
+    input_size = 7
+    output_size = 3
     batch_size = 1024
-    dataset = Dataset("./train/processed/kr"+group+".csv")
+    dataset = Dataset("./train/processed/train_feature/"+road_id+".csv")
     train_size = int(0.8 * len(dataset))
     valid_size = len(dataset) - train_size
     train_set, valid_set = torch.utils.data.random_split(dataset, [train_size, valid_size])
@@ -106,7 +106,7 @@ def run(group_index):
             net.train()
             for batch_idx, (X, Y) in enumerate(train_data):
                 X = X.reshape(X.shape[0], 6, input_size).double()
-                # Y = Y.reshape(Y.shape[0], output_size).double()
+                Y = Y.reshape(Y.shape[0], output_size).double()
                 predi = net(X)
                 loss_fn = torch.nn.L1Loss(reduction='mean')
                 # loss_out = torch.nn.L1Loss(reduction='mean')
@@ -119,8 +119,8 @@ def run(group_index):
                 if batch_idx % 10 == 0:
                     vis.line([loss.item()], [batch_idx + epoch * len(dataset)/batch_size], win='train', update='append')
                     print("batch: {}, loss {}".format(batch_idx + epoch * len(dataset)/batch_size, loss.item()))
-            if epoch == 99:
-                torch.save(net.state_dict(), './out/group_'+group+'_LSTM_100.pth')
+            if epoch == 499:
+                torch.save(net.state_dict(), './out/group_'+str(group_index)+'_LSTM_500.pth')
 
     def valid():
         result = []
@@ -129,13 +129,13 @@ def run(group_index):
         with torch.no_grad():
             for batch_idx, (X, Y) in enumerate(valid_data):
                 X = X.reshape(X.shape[0], 6, input_size).double()
-                Y = Y.reshape(Y.shape[0], -1, output_size).double()
+                Y = Y.reshape(Y.shape[0], output_size).double()
                 predi = net(X) 
                 loss_fn = torch.nn.L1Loss(reduce='mean')
                 loss = loss_fn(predi, Y)
                 result.append(loss.item())
-                Y = Y.reshape(Y.shape[0], 1).numpy().tolist()
-                predi = net(X).reshape(X.shape[0], 1).numpy().tolist()
+                Y = Y.reshape(-1, 1).numpy().tolist()
+                predi = net(X).reshape(-1, 1).numpy().tolist()
                 real_val += Y
                 pre_val += predi
         print("performance on validation set is {}".format(sum(result)/len(result)))
@@ -260,10 +260,10 @@ def run(group_index):
                         print("batch: {}, loss {}".format(batch_idx + epoch * len(dataset)/batch_size, loss.item()))
             torch.save(net.state_dict(), './out/group_'+group+'_bag'+str(bag)+'.pth')
 
-    train(100)
+    train(500)
     # bagging(10, 100)
-    # net.load_state_dict(torch.load('./out/group_'+group+'_LSTM_100.pth'))
-    # valid()
+    net.load_state_dict(torch.load('./out/group_'+str(group_index)+'_LSTM_500.pth'))
+    valid()
     # test()
     # if(group == "11"):
     #     boost_test()

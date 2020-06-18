@@ -3,6 +3,8 @@ import copy
 import os
 import sys
 import re
+import pandas as pd
+import numpy as np
 
 sys.path.append(os.getcwd())
 import tools.group as gp
@@ -124,7 +126,9 @@ def train_dp_withgroup():
             # T[index] /= count[index]
             if (len(all_trajs[index]) == batch_size) or (
                     group != index and len(all_trajs[index]) > 1):
-                with open("./train/processed/kr" + str(index) + ".csv", "a+", newline='') as objfile:
+                with open("./train/processed/kr" + str(index) + ".csv",
+                          "a+",
+                          newline='') as objfile:
                     obj_writer = csv.writer(objfile)
                     for item in all_trajs[index]:
                         # for i in range(len(item)):
@@ -255,7 +259,41 @@ def clear():
     # os.remove(r"D:\projects\python\sodic\train\submit.csv")
 
 
+def train_dp_all():
+    path = "./train/train_features"
+    out_path = "./train/processed/train_feature/"
+    for name in list(os.listdir(path)):
+        with open(path + "/" + name) as f:
+            data = f.readlines()
+        col_names = data[0].replace("\n", "").split(",")
+        col_names[0] = "day"
+        data = [(s.replace("\n", "")).split(",") for s in data[1:]]
+        df = pd.DataFrame(data)
+        df.columns = col_names
+        df[col_names[0]] = df[col_names[0]].apply(lambda x: x.split(" ")[0])
+        for col in col_names[1:]:
+            df[col] = pd.to_numeric(df[col])
+        df.drop(df[df["time_block"] < 45].index, inplace=True)
+        df.drop(df[df["time_block"] > 135].index, inplace=True)
+        days = list(df["day"])
+        out = []
+        for day in list(set(days)):
+            temp_df = df[df.day == day]
+            for _, row in temp_df.iterrows():
+                block = row["time_block"]
+                result = temp_df[(temp_df.time_block >= (block - 8))
+                                 & (temp_df.time_block <= block)]
+                if (len(result) == 9):
+                    res = np.array(result.values)[:6, 2:].ravel()
+                    res = np.append(res, result.values[6:, 2])
+                    out.append(list(res))
+        out = pd.DataFrame(out).dropna()
+        out.to_csv(out_path+name, mode="w+", header=False, index=False)
+
+
 if __name__ == '__main__':
     # clear()
-    train_dp_withgroup()
-    test_dp()
+    # train_dp_withgroup()
+    # test_dp()
+    train_dp_all()
+    # train_dp_withspeed()
