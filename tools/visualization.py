@@ -3,6 +3,7 @@ import numpy
 import time
 import math
 import pandas as pd
+import copy
 
 PATH = "./asset/train_TTI.csv"
 
@@ -392,15 +393,32 @@ def vvv():
 
 def last_visual():
     for road_id in xs.keys():
-        df = pd.read_csv("./test/processed/merge/"+str(road_id)+".csv", index_col=0)
+        road_id = 276738
+        df = pd.read_csv("./train/processed/merge/"+str(road_id)+".csv", index_col=0)
+        df.index = range(df.shape[0])
         del df["id_road"]
+
+        a = copy.deepcopy(df["avg"])
+        a = a.values
+        b = a[1:]
+        # c = a[2:]
+        # c = 0.7*c + 0.25*b[:-1] + 0.05*a[:-2]
+        # c = c.tolist()
+        b = 0.7*b + 0.3*a[:-1]
+        b = b.tolist()
+        b.insert(0 ,0 )
+        # c.insert(0, 0)
+        df["avg"] = b
+
         df["speed"] = df["speed"] / 3.6
-        df["TTI"] = df["TTI"] * 10
+        # df["TTI"] = df["TTI"] * 10
         df["low_ratio"] = df["low_ratio"] * 10
 
+        del df["time_block"]
 
 
-        df.iloc[:24].plot()
+
+        df.iloc[144*12:144*12+100].plot()
         plt.show()
 
 
