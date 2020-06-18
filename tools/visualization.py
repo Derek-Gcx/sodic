@@ -390,6 +390,19 @@ def vvv():
 
             line = fp.readline()
 
+def last_visual():
+    for road_id in xs.keys():
+        df = pd.read_csv("./test/processed/merge/"+str(road_id)+".csv", index_col=0)
+        del df["id_road"]
+        df["speed"] = df["speed"] / 3.6
+        df["TTI"] = df["TTI"] * 10
+        df["low_ratio"] = df["low_ratio"] * 10
+
+
+
+        df.iloc[:24].plot()
+        plt.show()
+
 
 
 
@@ -398,6 +411,7 @@ if __name__ == "__main__":
     # show_seasonality()
     # foo()
     # show_TTI_avgspeed()
-    show_avg_TTI_around_year()
+    # show_avg_TTI_around_year()
+    last_visual()
 
 

@@ -12,7 +12,7 @@ all_id = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,
 
 def interested_date_range():
     month=12
-    days = range(1, 21)
+    days = range(1, 30)
     clocks = list(range(8, 23))
     tot = pd.date_range(start="2019-01-01 12:00:00", end="2019-01-01 11:00:00", freq="10T")
     for day in days:
@@ -21,7 +21,7 @@ def interested_date_range():
     return tot
 def total_date_range():
     month=12
-    days = range(1, 21)
+    days = range(1, 30)
     clocks = list(range(0, 24))
     tot = pd.date_range(start="2019-01-01 12:00:00", end="2019-01-01 11:00:00", freq="10T")
     for day in days:
@@ -31,8 +31,8 @@ def total_date_range():
 
 def merge_dataset():
     for road_id in all_id:
-        df1 = pd.read_csv("./train/processed/devided_train_TTI/"+str(road_id)+".csv", index_col=0)
-        df2 = pd.read_csv("./train/processed/feature/201910_11/"+str(road_id)+".csv", index_col=0, header=None)
+        df1 = pd.read_csv("./test/processed/devided_train_TTI/"+str(road_id)+".csv", index_col=0)
+        df2 = pd.read_csv("./test/processed/feature/test/"+str(road_id)+".csv", index_col=0, header=None)
         df2.columns=["avg", "low2"]
 
         df1 = df1.set_index(pd.to_datetime(df1.index))

@@ -7,22 +7,25 @@ import os
 road_ids = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
 user_road_time = None
 
-GPS1 = "./train/201912/"
+# GPS1 = "./train/201912/"
 # GPS2 = "./train/201910_11/"
 # GPS3 = "./train/201901_201903/"
+GPS4 = "./train/test/"
 GPSs = [
-    GPS1, 
+    # GPS1, 
     # GPS2, 
     # GPS3, 
+    GPS4, 
 ]
 
 
 def extract_feature():
-    out_path = "./train/processed/feature/201912/"
+    out_path = "./train/processed/feature/201910_11/"
     out_csvs = {}
 
     for GPS in GPSs:
         for file in list(os.walk(GPS))[0][2]:
+            file = "0101.csv"
             print("processing", GPS+file)
             with open(GPS+file, "r") as fp:
                 entries = fp.readlines()
@@ -39,7 +42,7 @@ def extract_feature():
             del prod["count"]
             for road_id in prod["road_id"].unique():
                 out_csvs[road_id] = prod[prod["road_id"]==road_id].iloc[:, 1:]
-                out_csvs[road_id].to_csv(out_path+str(road_id)+".csv", mode="a", header=False, index=False)
+                # out_csvs[road_id].to_csv(out_path+str(road_id)+".csv", mode="a", header=False, index=False)
 
 
 def merge(b):
