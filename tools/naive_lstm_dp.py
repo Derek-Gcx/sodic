@@ -295,5 +295,6 @@ if __name__ == '__main__':
     # clear()
     # train_dp_withgroup()
     # test_dp()
-    train_dp_all()
+    # train_dp_all()
+    test_dp_all()
     # train_dp_withspeed()

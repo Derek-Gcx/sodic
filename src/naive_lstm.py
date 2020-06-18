@@ -41,9 +41,9 @@ class naive_LSTM(nn.Module):
         self.is_training = is_training
         # self.lstm = nn.LSTM(input_size, 16, 1).double()
         # self.gru1 = nn.GRU(input_size, 16, 1, dropout=0.2).double()
-        self.gru = nn.GRU(input_size, 32, 2, dropout=0.2, bidirectional=True).double()
-        nerus = [32, 64, 16, output_size]
-        drop_rate = [0.1, 0.1, 0]
+        self.gru = nn.GRU(input_size, 32, 2, dropout=0.1, bidirectional=True).double()
+        nerus = [32, 128, 16, output_size]
+        drop_rate = [0.1, 0, 0]
         mlp_list = []
         for i in range(len(nerus) - 1):
             mlp_i = nn.Sequential(
@@ -119,15 +119,15 @@ def run(group_index):
                 if batch_idx % 10 == 0:
                     vis.line([loss.item()], [batch_idx + epoch * len(dataset)/batch_size], win='train', update='append')
                     print("batch: {}, loss {}".format(batch_idx + epoch * len(dataset)/batch_size, loss.item()))
-            if epoch == 499:
-                torch.save(net.state_dict(), './out/group_'+str(group_index)+'_LSTM_500.pth')
+            if epoch == 299:
+                torch.save(net.state_dict(), './out/group_'+str(group_index)+'_LSTM_200.pth')
 
     def valid():
         result = []
         real_val = []
         pre_val = []
         with torch.no_grad():
-            for batch_idx, (X, Y) in enumerate(valid_data):
+            for batch_idx, (X, Y) in enumerate(whole_data):
                 X = X.reshape(X.shape[0], 6, input_size).double()
                 Y = Y.reshape(Y.shape[0], output_size).double()
                 predi = net(X) 
@@ -260,9 +260,9 @@ def run(group_index):
                         print("batch: {}, loss {}".format(batch_idx + epoch * len(dataset)/batch_size, loss.item()))
             torch.save(net.state_dict(), './out/group_'+group+'_bag'+str(bag)+'.pth')
 
-    train(500)
+    # train(300)
     # bagging(10, 100)
-    net.load_state_dict(torch.load('./out/group_'+str(group_index)+'_LSTM_500.pth'))
+    net.load_state_dict(torch.load('./out/group_'+str(group_index)+'_LSTM_200.pth'))
     valid()
     # test()
     # if(group == "11"):
@@ -270,5 +270,5 @@ def run(group_index):
 
 
 if __name__ == "__main__":
-    for i in range(12):
+    for i in range(4, 5):
         run(i)
