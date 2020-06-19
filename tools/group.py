@@ -45,12 +45,21 @@ inverseDict = {
 
 
 def iimap(road_id):
+    """
+    map road_id to index
+    """
     return roadDict.get(road_id, -1)
 
 
 def igmap(road_id):
+    """
+    map road_id to group_id
+    """
     return groupDict.get(road_id, -1)
 
 
 def iv_map(group):
+    """
+    map index to group
+    """
     return inverseDict.get(group, -1)
