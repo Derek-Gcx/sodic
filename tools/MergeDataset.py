@@ -7,12 +7,6 @@ import copy
 import matplotlib.pyplot as plt
 import datetime
 
-"""
-merge train_TTI and feature csvs like train_TTI
-and
-generate training set and testing set
-"""
-
 all_id = [276183,276184,275911,275912,276240,276241,276264,276265,276268,276269,276737,276738]
 
 train_feature_csvs = [

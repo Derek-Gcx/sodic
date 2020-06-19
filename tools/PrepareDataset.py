@@ -3,14 +3,6 @@ import pandas as pd
 import os
 import sys
 import copy
-"""
-    devide_train_TTI_by_roadid():   将train_TTI按照道路分组， 输出到train/processed/devided_train_TTI目录下
-    check_and_fill_nan():           对按道路分割后的数据集文件进行日期补全。也就是在2019-01-01 00：00：00～2019-03-31 23：50：00
-                                        和2019-10-01 00：00：00～2019-12-21 23：50：00这两段时间内，缺少的数据记录将会用NAN补全。
-    prepare_train_set_group12():    对于每条道路， 准备好网络的输入向量。 具体的entry形式为：过去六个时段的TTI+待预测的TTI；文件输出目录为train/processed/to_train
-    add_neighbour_info():           向上一步生成的12个训练集进一步添加近邻信息, 输出目录同上
-    drop_nan():                     删除训练集中含有nan的行
-"""
 
 sys.path.append(os.getcwd())
 
@@ -188,32 +180,6 @@ def construct_test_dataset():
     test = pd.concat([nolabel, test], axis=1)
     test.to_csv("./test/processed/test_data.csv", index=False, header=True)
     print("test data constructed.")
-
-            
-
-
-
-
-    # # trainTTI = trainTTI.set_index("time")
-    # # trainTTI = trainTTI.set_index(pd.to_datetime(trainTTI.index))
-    # trainTTI["time"] = pd.to_datetime(trainTTI["time"])
-    # trainTTI = trainTTI.set_index(["time", "id_road"])
-
-    # nolabel = nolabel.drop(["id_sample"], axis=1)
-    # nolabel = nolabel.sort_index()
-
-    # Topredict = copy.deepcopy(nolabel)
-    # for index, row in nolabel.iterrows():
-    #     date_range = pd.date_range(end=index, periods=6, freq="10T")
-    #     entry = []
-    #     neighbours = neighbour_info[row["id_road"]]
-    #     neighbours.insert(0, row["id_road"])
-    #     print(neighbours)
-        
-    #     new_df = pd.DataFrame()
-    #     for neighbour in neighbours:
-    #         tmp = trainTTI.reindex([date_range, row["id_road"]])
-
 
 
 if __name__=="__main__":

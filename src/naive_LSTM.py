@@ -43,12 +43,19 @@ class naive_LSTM(nn.Module):
         self.is_training = is_training
         self.road_id = road_id
 
-        self.gru1 = nn.GRU(input_size, 16, 1, dropout=0.2).double()
+        self.gru1 = nn.GRU(input_size, 16, 1).double()
         self.gru2 = nn.GRU(16, 32, 1, dropout=0.2, bidirectional=True).double()
-        mlp_list = [
-            nn.Linear(32, 8), 
-            nn.Linear(8, output_size)
-        ]
+        nerus = [32, 64, 16, output_size]
+        drop_rate = [0.1, 0, 0]
+        mlp_list = []
+        for i in range(len(nerus) - 1):
+            mlp_i = nn.Sequential(
+                nn.Linear(nerus[i], nerus[i+1]),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(nerus[i+1]),
+                nn.Dropout(drop_rate[i])
+            )
+            mlp_list.append(mlp_i)
         self.mlp = nn.Sequential(*mlp_list).double()
 
         for m in self.modules():
