@@ -1,6 +1,6 @@
 ## “华为云杯”2020深圳开放数据应用创新大赛（SODiC）——深圳北站周边交通拥堵指数预测
 ### 贡献者
-+ [高辰潇](https://github.com/Derek-Gcx) 南京大学
++ [高辰潇](https://github.com/typoverflow) 南京大学
 + [孔锐](https://github.com/LyndonKong) 南京大学
 + [王傲然](https://github.com/Syntaks-Error) 南京大学
 
